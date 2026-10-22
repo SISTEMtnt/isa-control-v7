@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Starting Soon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --fg: #f3f6fb;
+    --dim: rgba(243,246,251,0.55);
+    --dim2: rgba(243,246,251,0.32);
+    --teal: #4be3c4;
+    --amber: #ffc93c;
+    --red: #ff4141;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #05070c;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--fg);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  canvas#stars {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .hex {
+    position: fixed;
+    border: 1px solid rgba(120,150,190,0.16);
+    transform: rotate(0deg);
+  }
+  .hex1 { width: 260px; height: 260px; top: -80px; right: -60px; border-radius: 28px; }
+  .hex2 { width: 220px; height: 220px; bottom: -70px; left: -60px; border-radius: 24px; }
+
+  .wrap {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .card {
+    text-align: center;
+  }
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.28em;
+    color: var(--teal);
+    text-transform: uppercase;
+    margin-bottom: 22px;
+  }
+  .status .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--teal);
+    box-shadow: 0 0 12px var(--teal);
+    animation: blink 1.6s ease-in-out infinite;
+  }
+  .status.hold { color: var(--amber); }
+  .status.hold .dot { background: var(--amber); box-shadow: 0 0 12px var(--amber); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+  .title {
+    font-size: 88px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    text-transform: uppercase;
+    text-shadow: 0 0 40px rgba(255,255,255,0.14);
+  }
+
+  .subtitle {
+    margin-top: 18px;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .rule {
+    width: 460px;
+    max-width: 70vw;
+    height: 1px;
+    margin: 36px auto;
+    background: linear-gradient(90deg, transparent, rgba(243,246,251,0.28), transparent);
+  }
+
+  .clock {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 64px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 24px rgba(255,255,255,0.12);
+  }
+  .clock.hold { color: var(--amber); }
+  .clock.abort { color: var(--red); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.55} }
+
+  .mission {
+    margin-top: 14px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--dim2);
+  }
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="hex hex1"></div>
+<div class="hex hex2"></div>
+
+<div class="wrap">
+  <div class="card">
+    <div class="status" id="status"><span class="dot"></span><span id="statusText">Standing By</span></div>
+    <div class="title" id="title">Starting Soon</div>
+    <div class="subtitle" id="subtitle">Stream begins shortly</div>
+    <div class="rule"></div>
+    <div class="clock" id="clock">T-00:00:00</div>
+    <div class="mission" id="mission">STARSHIP FLIGHT TEST</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ---- starfield ----
+  const canvas = document.getElementById('stars')
+  const ctx = canvas.getContext('2d')
+  let stars = []
+  function resize() {
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+    const count = Math.floor((canvas.width * canvas.height) / 6000)
+    stars = Array.from({ length: count }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.4 + 0.2,
+      a: Math.random() * 0.6 + 0.15,
+      tw: Math.random() * 0.015 + 0.003,
+      dir: Math.random() < 0.5 ? 1 : -1
+    }))
+  }
+  function drawStars() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    stars.forEach(s => {
+      s.a += s.tw * s.dir
+      if (s.a > 0.75 || s.a < 0.1) s.dir *= -1
+      ctx.beginPath()
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2)
+      ctx.fillStyle = `rgba(220,232,255,${s.a})`
+      ctx.fill()
+    })
+    requestAnimationFrame(drawStars)
+  }
+  window.addEventListener('resize', resize)
+  resize()
+  drawStars()
+
+  // ---- clock, synced to server countdown ----
+  function pad(n) { return String(n).padStart(2, '0') }
+  function fmt(ms) {
+    const s = Math.floor(Math.abs(ms) / 1000)
+    return pad(Math.floor(s / 3600)) + ':' + pad(Math.floor((s % 3600) / 60)) + ':' + pad(s % 60)
+  }
+
+  let state = null, skew = 0, skewReady = false
+
+  function elapsed(t) {
+    if (!t.running) return t.elapsedMs
+    return t.elapsedMs + (Date.now() - skew - t.startTimestamp)
+  }
+
+  function render() {
+    if (!state) return
+    const t = state.timer
+    const e = elapsed(t)
+    let text
+    let remainMs = null
+    if (t.mode === 'down') remainMs = t.totalMs - e
+
+    if (t.aborted) {
+      text = 'T-ABORT'
+    } else if (t.hold) {
+      text = 'T-HOLD'
+    } else if (t.mode === 'down') {
+      text = remainMs > 0 ? 'T-' + fmt(remainMs) : 'T+' + fmt(e - t.totalMs)
+    } else {
+      text = 'T+' + fmt(e)
+    }
+
+    const clock = document.getElementById('clock')
+    clock.textContent = text
+    clock.className = 'clock' + (t.aborted ? ' abort' : t.hold ? ' hold' : '')
+
+    const status = document.getElementById('status')
+    const statusText = document.getElementById('statusText')
+    if (t.hold) {
+      status.className = 'status hold'
+      statusText.textContent = 'Holding'
+    } else {
+      status.className = 'status'
+      statusText.textContent = 'Standing By'
+    }
+
+    document.getElementById('mission').textContent = t.label || 'STARSHIP FLIGHT TEST'
+  }
+
+  requestAnimationFrame(function tick() { render(); requestAnimationFrame(tick) })
+
+  function connect() {
+    const p = location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const ws = new WebSocket(p + '//' + location.host + '/')
+    ws.onmessage = e => {
+      try {
+        const m = JSON.parse(e.data)
+        if (m.type === 'state') {
+          state = m
+          if (m.serverNow) {
+            // sync once, then only accept lower (lower-latency) samples
+            const sm = Date.now() - m.serverNow
+            if (!skewReady) { skew = sm; skewReady = true }
+            else if (sm < skew) skew = sm
+          }
+        }
+      } catch {}
+    }
+    ws.onclose = () => setTimeout(connect, 1200)
+    ws.onerror = () => ws.close()
+  }
+  connect()
+})()
+</script>
+</body>
+</html>

@@ -1,0 +1,2115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mission Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #050508;
+  --panel: rgba(14, 16, 24, 0.55);
+  --panel-solid: rgba(14, 16, 24, 0.82);
+  --panel2: rgba(18, 20, 30, 0.45);
+  --glass: rgba(255, 255, 255, 0.04);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-highlight: rgba(255, 255, 255, 0.18);
+  --line: rgba(120, 170, 255, 0.22);
+  --line-bright: rgba(140, 190, 255, 0.45);
+  --fg: #f4f6fb;
+  --dim: #9aa3b5;
+  --muted: #5c6578;
+  --orange: #5ba3ff;
+  --orange-soft: #8ec4ff;
+  --orange-dim: rgba(91, 163, 255, 0.14);
+  --green: #3eeb9a;
+  --green-dim: rgba(62, 235, 154, 0.14);
+  --amber: #ffc93c;
+  --amber-dim: rgba(255, 201, 60, 0.14);
+  --red: #ff4d5e;
+  --red-dim: rgba(255, 77, 94, 0.14);
+  --cyan: #4dd4ff;
+  --radius: 16px;
+  --radius-sm: 12px;
+  --blur: 28px;
+  --font: 'Barlow Condensed', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--fg); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+body {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(91, 163, 255, 0.14), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 85% 90%, rgba(62, 235, 154, 0.06), transparent 50%),
+    radial-gradient(ellipse 50% 30% at 50% 50%, rgba(255, 255, 255, 0.02), transparent),
+    var(--bg);
+  background-attachment: fixed;
+  position: relative;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: 0.5;
+}
+::selection { background: var(--orange); color: #031a2e; }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(140, 190, 255, 0.22); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(140, 190, 255, 0.4); border: 2px solid transparent; background-clip: padding-box; }
+
+/* Liquid Glass panels */
+.hud, .card, .login-card, .sysbox, .stat-pill {
+  backdrop-filter: blur(var(--blur)) saturate(1.6);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.6);
+}
+.hud {
+  position: relative;
+  background: linear-gradient(145deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 40%, rgba(0,0,0,0.15) 100%),
+              var(--panel);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.2) inset;
+  overflow: hidden;
+}
+.hud::before {
+  content: '';
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 42%, transparent 58%, rgba(255,255,255,0.04) 100%);
+  opacity: 0.7;
+}
+.hud::after {
+  content: '';
+  position: absolute; top: 0; left: 12%; right: 12%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+  pointer-events: none;
+}
+
+/* —— LOGIN —— */
+#login {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  background:
+    radial-gradient(ellipse at 30% 15%, rgba(63,157,255,0.16), transparent 50%),
+    radial-gradient(ellipse at 75% 85%, rgba(63,157,255,0.07), transparent 45%),
+    var(--bg);
+}
+#login.hidden { display: none; }
+.login-card {
+  width: min(400px, 92vw);
+  background: linear-gradient(160deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.02) 50%, rgba(0,0,0,0.2) 100%),
+              var(--panel-solid);
+  padding: 40px 32px 28px;
+  border-radius: var(--radius);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 24px 80px rgba(0,0,0,0.55),
+    0 1px 0 rgba(255,255,255,0.1) inset,
+    0 0 0 1px rgba(255,255,255,0.03);
+  position: relative;
+  overflow: hidden;
+}
+.login-card::before {
+  content: '';
+  position: absolute; top: 0; left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+}
+.login-card::after {
+  content: '';
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 40%);
+}
+.login-logo { text-align: center; margin-bottom: 26px; }
+.login-logo img { filter: drop-shadow(0 0 14px rgba(63,157,255,0.4)); }
+.login-logo h1 {
+  font-size: 22px; letter-spacing: 8px; font-weight: 800; margin-top: 14px;
+  color: var(--fg);
+}
+.login-logo h1 span { color: var(--orange); }
+.login-logo p { margin-top: 6px; font-size: 11px; letter-spacing: 3px; color: var(--dim); font-family: var(--mono); }
+#loginErr { color: var(--red); text-align: center; min-height: 20px; font-size: 12px; letter-spacing: 1px; margin-bottom: 6px; font-family: var(--mono); }
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 11px; letter-spacing: 3px; color: var(--orange-soft); margin-bottom: 6px; font-weight: 700; font-family: var(--mono); }
+.field input {
+  width: 100%; background: var(--panel2); border: 1px solid var(--line); color: var(--fg);
+  border-radius: 3px; padding: 13px 14px; font-family: var(--font); font-size: 16px; letter-spacing: 1px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.field input:focus { outline: none; border-color: var(--orange); box-shadow: 0 0 0 3px var(--orange-dim); }
+.field input::placeholder { color: var(--muted); }
+#btnLogin {
+  width: 100%; margin-top: 10px;
+  background: var(--orange); color: #031a2e; border: none; border-radius: 3px;
+  padding: 14px; font-family: var(--font); font-size: 15px; font-weight: 800; letter-spacing: 4px; cursor: pointer;
+  transition: filter .15s, transform .1s;
+}
+#btnLogin:hover { filter: brightness(1.12); }
+#btnLogin:active { transform: scale(0.98); }
+.login-foot { margin-top: 20px; text-align: center; font-size: 10px; letter-spacing: 2px; color: var(--muted); font-family: var(--mono); }
+
+/* —— APP SHELL —— */
+#app.hidden { display: none; }
+#app { display: flex; flex-direction: column; height: 100%; }
+
+.titlebar {
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 20px; border-bottom: 1px solid var(--glass-border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01)),
+              rgba(8, 10, 16, 0.7);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+}
+.titlebar .tb-brand { display: flex; align-items: center; gap: 10px; }
+.titlebar .tb-brand img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid var(--line-bright); }
+.titlebar .tb-brand b { font-size: 17px; letter-spacing: 4px; font-weight: 800; color: var(--fg); }
+.titlebar .tb-brand b span { color: var(--orange); }
+.titlebar .tb-sub {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 2px; color: var(--dim);
+  border-left: 1px solid var(--line); padding-left: 14px; margin-left: 2px;
+  text-transform: uppercase;
+}
+.titlebar .tb-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.utc-clock {
+  font-family: var(--mono); font-size: 13px; letter-spacing: 2px; color: var(--orange-soft);
+  border: 1px solid var(--line); padding: 6px 12px; border-radius: 3px; background: var(--panel2);
+}
+.conn {
+  display: flex; align-items: center; gap: 6px; font-family: var(--mono);
+  font-size: 10px; letter-spacing: 2px; color: var(--dim); font-weight: 600;
+  border: 1px solid var(--line); padding: 6px 10px; border-radius: 3px; background: var(--panel2);
+}
+.conn .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+.conn.on { color: var(--green); }
+.conn.on .dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+.tabbar {
+  display: flex; align-items: center; gap: 2px; padding: 0 20px;
+  border-bottom: 1px solid var(--glass-border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), transparent),
+              rgba(8, 10, 16, 0.65);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  overflow-x: auto;
+}
+.tabbar button {
+  background: transparent; border: none; color: var(--dim);
+  font-family: var(--font); font-size: 14px; font-weight: 700; letter-spacing: 3px;
+  padding: 13px 18px; cursor: pointer; position: relative; white-space: nowrap;
+  text-transform: uppercase; transition: color .15s;
+}
+.tabbar button:hover { color: var(--orange-soft); }
+.tabbar button.active { color: var(--orange); }
+.tabbar button.active::after {
+  content: ''; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px;
+  background: var(--orange); box-shadow: 0 0 8px var(--orange);
+}
+
+.who-strip {
+  margin-left: auto; display: flex; align-items: center; gap: 10px; padding-left: 12px;
+}
+.who-strip .name { font-size: 13px; letter-spacing: 1.5px; font-weight: 700; color: var(--fg); }
+.title-badge {
+  font-size: 9px; letter-spacing: 1.5px; font-weight: 800; padding: 3px 8px; border-radius: 3px;
+  background: var(--orange-dim); color: var(--orange-soft); font-family: var(--mono); text-transform: uppercase;
+  border: 1px solid var(--line);
+}
+.title-badge.ceo { background: var(--green-dim); color: var(--green); border-color: rgba(53,224,138,0.35); }
+.title-badge.booster_director { background: var(--amber-dim); color: var(--amber); border-color: rgba(255,201,60,0.35); }
+.title-badge.ship_director { background: rgba(67,212,255,0.14); color: var(--cyan); border-color: rgba(67,212,255,0.35); }
+#btnLogout {
+  background: transparent; border: 1px solid var(--line); color: var(--dim); border-radius: 3px;
+  padding: 7px 12px; font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 2px; cursor: pointer;
+}
+#btnLogout:hover { border-color: var(--red); color: var(--red); }
+
+main.content { flex: 1; overflow-y: auto; padding: 20px 24px 40px; }
+.section { display: none; animation: fadeIn .2s ease; }
+.section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* —— HERO PREVIEW STRIP —— */
+.hero {
+  display: grid;
+  grid-template-columns: 1fr auto minmax(220px, 1.15fr) auto 1fr;
+  align-items: stretch;
+  gap: 0;
+  padding: 18px 22px;
+  margin-bottom: 16px;
+}
+.hero .stat { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-width: 0; }
+.hero .stat .val { font-family: var(--mono); font-size: clamp(28px,4vw,44px); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--fg); }
+.hero .stat .lbl { font-size: 11px; letter-spacing: 3px; color: var(--dim); font-weight: 700; font-family: var(--mono); }
+.hero .diamond { display: flex; align-items: center; justify-content: center; padding: 0 18px; color: var(--orange); font-size: 20px; }
+.hero .clockbox {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  border: 1px solid var(--line-bright); border-radius: 3px; padding: 10px 28px; background: var(--panel2);
+  box-shadow: inset 0 0 30px rgba(63,157,255,0.06);
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+.hero .clockbox:hover {
+  border-color: var(--orange);
+  box-shadow: inset 0 0 30px rgba(63,157,255,0.1), 0 0 18px rgba(63,157,255,0.12);
+}
+.hero .clockbox .hint {
+  font-size: 9px; letter-spacing: 2px; color: var(--muted); font-family: var(--mono); font-weight: 600;
+  margin-top: 2px; opacity: 0; transition: opacity .15s;
+}
+.hero .clockbox:hover .hint { opacity: 1; }
+
+.top-clock {
+  font-family: var(--mono); font-size: clamp(30px,4.4vw,52px); font-weight: 600; letter-spacing: 2px;
+  font-variant-numeric: tabular-nums; color: var(--orange);
+  text-shadow: 0 0 18px rgba(63,157,255,0.45);
+}
+.top-clock.hold { color: var(--amber); text-shadow: 0 0 18px rgba(255,201,60,0.5); }
+.top-clock.abort { color: var(--red); text-shadow: 0 0 22px rgba(255,65,65,0.6); animation: abortPulse 1s infinite; }
+@keyframes abortPulse { 0%,100%{opacity:1} 50%{opacity:.55} }
+.clockbox .lbl2 { font-size: 10px; letter-spacing: 3px; color: var(--dim); font-family: var(--mono); font-weight: 700; }
+
+/* —— SYSTEMS STATUS STRIP —— */
+.sysgrid {
+  display: grid; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); gap: 10px; margin-bottom: 16px;
+}
+.sysbox {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 11px 14px; border: 1px solid var(--glass-border); border-radius: 12px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01)), var(--panel);
+  font-family: var(--mono); font-size: 11px; letter-spacing: 2px; font-weight: 700; color: var(--dim);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset;
+}
+.sysbox .sysdot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+.sysbox.go { color: var(--green); border-color: rgba(53,224,138,0.35); background: var(--green-dim); }
+.sysbox.go .sysdot { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.sysbox.nogo { color: var(--red); border-color: rgba(255,65,65,0.35); background: var(--red-dim); }
+.sysbox.nogo .sysdot { background: var(--red); box-shadow: 0 0 8px var(--red); }
+.sysbox.warn { color: var(--amber); border-color: rgba(255,201,60,0.35); background: var(--amber-dim); }
+.sysbox.warn .sysdot { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 900px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .hero {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: 10px;
+  }
+  .hero .diamond { padding: 4px 0; transform: rotate(90deg); }
+  .hero .clockbox { order: -1; }
+  .titlebar .tb-sub { display: none; }
+  .who-strip .name { display: none; }
+}
+
+.card {
+  background: linear-gradient(155deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.015) 45%, rgba(0,0,0,0.12) 100%),
+              var(--panel);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  box-shadow:
+    0 6px 24px rgba(0,0,0,0.28),
+    0 1px 0 rgba(255,255,255,0.07) inset;
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute; top: 0; left: 8%; right: 8%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent);
+  pointer-events: none;
+}
+.card h3 {
+  font-size: 11px; letter-spacing: 3px; color: var(--orange-soft); margin-bottom: 14px; font-weight: 800;
+  display: flex; align-items: center; gap: 10px; font-family: var(--mono); text-transform: uppercase;
+  position: relative; z-index: 1;
+}
+.card h3::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line), transparent); }
+.card h3 .dot2 { width: 6px; height: 6px; background: var(--orange); transform: rotate(45deg); flex-shrink: 0; box-shadow: 0 0 8px var(--orange); }
+
+.kv { display: flex; justify-content: space-between; align-items: baseline; padding: 7px 0; border-bottom: 1px solid rgba(63,157,255,0.06); font-size: 15px; letter-spacing: 1px; }
+.kv:last-child { border-bottom: none; }
+.kv .k { color: var(--dim); font-weight: 500; }
+.kv .v { font-family: var(--mono); font-weight: 600; font-variant-numeric: tabular-nums; font-size: 14px; color: var(--fg); }
+
+.age { margin-top: 10px; font-size: 11px; letter-spacing: 2px; font-weight: 700; font-family: var(--mono); }
+.age.live { color: var(--green); } .age.stale { color: var(--amber); } .age.dead { color: var(--red); }
+
+/* countdown timer block (SET COUNTDOWN style) */
+.countdown-display {
+  font-family: var(--mono); font-size: clamp(30px,4vw,42px); font-weight: 600; letter-spacing: 3px;
+  text-align: center; padding: 16px; border: 1px solid var(--line-bright); border-radius: 3px;
+  background: var(--panel2); color: var(--fg); font-variant-numeric: tabular-nums; margin-bottom: 10px;
+  cursor: pointer; transition: border-color .15s, box-shadow .15s, color .15s;
+  position: relative;
+}
+.countdown-display:hover {
+  border-color: var(--orange);
+  box-shadow: 0 0 18px rgba(63,157,255,0.12);
+  color: var(--orange-soft);
+}
+.countdown-display .cd-hint {
+  display: block; font-size: 10px; letter-spacing: 2px; color: var(--muted); margin-top: 6px;
+  font-weight: 600; opacity: 0.7;
+}
+.preset-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.preset-row button {
+  flex: 1; min-width: 70px; background: var(--panel2); border: 1px solid var(--line); color: var(--dim);
+  font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+  padding: 10px; border-radius: 3px; cursor: pointer; transition: all .15s;
+}
+.preset-row button:hover { border-color: var(--orange); color: var(--orange-soft); }
+
+
+/* —— LAUNCH SEQUENCE BUTTONS —— */
+.seq-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-top: 4px; }
+.seq-btn {
+  font-family: var(--font); font-size: 16px; font-weight: 800; letter-spacing: 3px;
+  border-radius: 3px; padding: 20px 10px; cursor: pointer; text-transform: uppercase;
+  background: var(--panel2); border: 1.5px solid var(--line); color: var(--dim);
+  transition: all .12s; text-align: center;
+}
+.seq-btn:active { transform: scale(0.96); }
+.seq-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.seq-btn.resume { border-color: rgba(53,224,138,0.45); color: var(--green); }
+.seq-btn.resume:hover { background: var(--green-dim); box-shadow: 0 0 16px rgba(53,224,138,0.25); }
+.seq-btn.hold { border-color: rgba(255,201,60,0.45); color: var(--amber); }
+.seq-btn.hold:hover { background: var(--amber-dim); box-shadow: 0 0 16px rgba(255,201,60,0.25); }
+.seq-btn.abort { border-color: rgba(255,65,65,0.45); color: var(--red); }
+.seq-btn.abort:hover { background: var(--red-dim); box-shadow: 0 0 16px rgba(255,65,65,0.3); }
+.seq-btn.ghost:hover { border-color: var(--line-bright); color: var(--fg); background: rgba(63,157,255,0.06); }
+
+.cmds { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.cmds button, .btn {
+  font-family: var(--font); font-size: 13px; font-weight: 800; letter-spacing: 1.5px;
+  border-radius: 10px; padding: 11px 16px; cursor: pointer; transition: all .15s ease;
+  border: 1px solid var(--glass-border); background: rgba(255,255,255,0.04); color: var(--dim); text-transform: uppercase;
+  backdrop-filter: blur(10px);
+}
+.cmds button:active, .btn:active { transform: scale(0.97); }
+.cmds button:disabled { opacity: 0.3; cursor: not-allowed; }
+.cmds .hold { border-color: rgba(255,201,60,0.45); color: var(--amber); }
+.cmds .hold:hover { background: var(--amber-dim); }
+.cmds .abort { border-color: rgba(255,65,65,0.45); color: var(--red); }
+.cmds .abort:hover { background: var(--red-dim); }
+.cmds .ghost, .btn.ghost { border-color: var(--glass-border); color: var(--fg); }
+.cmds .ghost:hover, .btn.ghost:hover { border-color: var(--line-bright); background: rgba(91,163,255,0.08); }
+.cmds .primary, .btn.primary { background: linear-gradient(135deg, var(--orange), #3a8aef); color: #031a2e; border-color: transparent; box-shadow: 0 4px 16px rgba(91,163,255,0.3); }
+.cmds .primary:hover, .btn.primary:hover { filter: brightness(1.12); }
+
+.field-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.field-row input[type=text], .field-row input[type=datetime-local] {
+  flex: 1; min-width: 140px; background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border); color: var(--fg);
+  border-radius: 10px; padding: 11px 12px; font-family: var(--font); font-size: 14px; letter-spacing: 1px;
+}
+.field-row input:focus { outline: none; border-color: var(--orange); box-shadow: 0 0 0 3px rgba(91,163,255,0.15); }
+.field-row button {
+  background: var(--orange); color: #031a2e; border: none; border-radius: 3px; padding: 11px 16px;
+  font-family: var(--font); font-weight: 800; letter-spacing: 1.5px; cursor: pointer; font-size: 13px;
+}
+.field-row button:hover { filter: brightness(1.1); }
+
+.section-label { font-size: 10px; letter-spacing: 3px; color: var(--dim); font-weight: 700; font-family: var(--mono); margin: 16px 0 8px; text-transform: uppercase; }
+
+.stations { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 8px 0 12px; }
+.stations label { display: flex; align-items: center; gap: 6px; font-size: 14px; letter-spacing: 1px; cursor: pointer; color: var(--dim); }
+.stations input { accent-color: var(--orange); }
+
+.poll-stats { margin: 12px 0; font-size: 15px; letter-spacing: 1px; font-family: var(--mono); }
+.poll-stats .go { color: var(--green); font-weight: 800; }
+.poll-stats .nogo { color: var(--red); font-weight: 800; }
+.poll-bar { height: 7px; border-radius: 3px; background: var(--panel2); display: flex; overflow: hidden; margin-bottom: 10px; border: 1px solid var(--line); }
+.poll-bar .g { background: var(--green); transition: width .3s; }
+.poll-bar .n { background: var(--red); transition: width .3s; }
+
+.vote-row { display: flex; gap: 8px; margin-top: 10px; }
+.vote-row button { flex: 1; border-radius: 3px; padding: 13px; cursor: pointer; font-family: var(--font); font-weight: 800; letter-spacing: 2px; font-size: 14px; text-transform: uppercase; }
+.vote-row .go-btn { background: var(--green-dim); color: var(--green); border: 1.5px solid rgba(53,224,138,0.4); }
+.vote-row .go-btn:hover { box-shadow: 0 0 14px rgba(53,224,138,0.25); }
+.vote-row .nogo-btn { background: var(--red-dim); color: var(--red); border: 1.5px solid rgba(255,65,65,0.4); }
+.vote-row .nogo-btn:hover { box-shadow: 0 0 14px rgba(255,65,65,0.25); }
+.voters { font-size: 12px; color: var(--dim); margin-top: 8px; letter-spacing: 1px; font-family: var(--mono); }
+
+/* Launch schedule */
+.sched-counts {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px;
+}
+.sched-count {
+  flex: 1; min-width: 90px; text-align: center;
+  padding: 10px 12px; border-radius: 8px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--line);
+  font-family: var(--mono); letter-spacing: 1px;
+}
+.sched-count .sc-label {
+  display: block; font-size: 10px; color: var(--dim); font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px;
+}
+.sched-count .sc-num {
+  display: block; font-size: 22px; font-weight: 700; color: var(--fg);
+}
+.sched-count.planning .sc-num { color: #9aa4b2; }
+.sched-count.approved .sc-num { color: var(--green); }
+.sched-count.scheduled .sc-num { color: var(--orange-soft); }
+.sched-count.flown .sc-num { color: #7dd3fc; }
+.sched-count.scrubbed .sc-num { color: var(--red); }
+
+.sched-item {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  padding: 10px 12px; margin-bottom: 8px;
+  background: var(--panel2); border: 1px solid var(--line); border-radius: 3px;
+}
+.sched-item.approved { border-color: rgba(53,224,138,0.35); }
+.sched-item.scheduled { border-color: var(--orange); box-shadow: 0 0 12px rgba(63,157,255,0.12); }
+.sched-item.flown { opacity: 0.75; }
+.sched-item.scrubbed { opacity: 0.55; }
+.sched-main { flex: 1; min-width: 160px; }
+.sched-name { font-weight: 700; letter-spacing: 1px; font-size: 14px; }
+.sched-meta { font-family: var(--mono); font-size: 12px; color: var(--dim); letter-spacing: 1px; margin-top: 3px; }
+.sched-status {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 2px; font-weight: 700;
+  padding: 3px 8px; border-radius: 2px; text-transform: uppercase;
+}
+.sched-status.planning { color: #9aa4b2; background: rgba(154,164,178,0.12); }
+.sched-status.approved { color: var(--green); background: var(--green-dim); }
+.sched-status.scheduled { color: var(--orange-soft); background: rgba(63,157,255,0.12); }
+.sched-status.flown { color: #7dd3fc; background: rgba(125,211,252,0.12); }
+.sched-status.scrubbed { color: var(--red); background: var(--red-dim); }
+.sched-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.sched-actions button { font-size: 11px; padding: 6px 10px; letter-spacing: 1px; }
+
+.log, .chat-log { max-height: 280px; overflow-y: auto; font-size: 12.5px; letter-spacing: 0.5px; color: var(--dim); line-height: 1.6; }
+.log { font-family: var(--mono); }
+.log div, .chat-log .row { padding: 8px 0; border-bottom: 1px solid rgba(63,157,255,0.06); }
+.chat-log .who { color: var(--orange-soft); font-weight: 700; }
+.chat-log .title { color: var(--cyan); font-size: 10px; letter-spacing: 1px; font-family: var(--mono); }
+.chat-log .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.chat-log .report-btn {
+  flex-shrink: 0; font-size: 10px; letter-spacing: 1px; padding: 5px 9px;
+  background: transparent; border: 1px solid var(--line); color: var(--dim); border-radius: 3px; cursor: pointer; font-family: var(--mono);
+}
+.chat-log .report-btn:hover { border-color: var(--red); color: var(--red); }
+
+.req { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(63,157,255,0.06); font-size: 14px; }
+.tag-hold { color: var(--amber); font-weight: 800; letter-spacing: 1px; font-family: var(--mono); }
+.tag-abort, .tag-scrub { color: var(--red); font-weight: 800; letter-spacing: 1px; font-family: var(--mono); }
+
+.ceo-only.locked, .dir-booster.locked, .dir-ship.locked { opacity: 0.3; pointer-events: none; filter: grayscale(0.4); }
+.report-item { padding: 12px 0; border-bottom: 1px solid rgba(63,157,255,0.06); }
+.report-item .meta { color: var(--dim); font-size: 11px; margin-bottom: 4px; letter-spacing: 1px; font-family: var(--mono); }
+.btn-sm { background: var(--panel2); border: 1px solid var(--line); color: var(--fg); border-radius: 3px; padding: 6px 10px; font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 1px; cursor: pointer; }
+.btn-sm:hover { border-color: var(--orange); color: var(--orange-soft); }
+
+a.stream-link { color: var(--cyan); text-decoration: none; font-size: 14px; letter-spacing: 1px; font-family: var(--mono); }
+a.stream-link:hover { text-decoration: underline; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 4px; }
+.stat-pill {
+  background: linear-gradient(150deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01));
+  border: 1px solid var(--glass-border); border-radius: 12px; padding: 13px 10px; text-align: center;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset;
+}
+.stat-pill .sv { font-family: var(--mono); font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--fg); }
+.stat-pill .sk { font-size: 10px; letter-spacing: 2px; color: var(--dim); margin-top: 5px; font-weight: 700; font-family: var(--mono); }
+
+/* Overlay mode buttons (CEO) */
+.overlay-modes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.overlay-modes button {
+  font-family: var(--mono); font-size: 12px; letter-spacing: 1.5px; font-weight: 700;
+  padding: 10px 14px; border-radius: 10px; cursor: pointer;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--glass-border); color: var(--dim);
+  transition: all .18s ease;
+  backdrop-filter: blur(12px);
+}
+.overlay-modes button:hover { border-color: var(--line-bright); color: var(--fg); background: rgba(255,255,255,0.08); }
+.overlay-modes button.active {
+  background: var(--orange-dim); border-color: var(--orange); color: var(--orange-soft);
+  box-shadow: 0 0 16px rgba(91,163,255,0.2);
+}
+
+/* Widget customization toggles */
+.widget-toggles {
+  display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px;
+}
+.wtog {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 12px; letter-spacing: 1px; font-weight: 600;
+  color: var(--dim); cursor: pointer; user-select: none;
+  padding: 9px 14px; border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--glass-border);
+  transition: all .15s ease;
+}
+.wtog:hover { color: var(--fg); border-color: var(--line-bright); background: rgba(255,255,255,0.06); }
+.wtog input {
+  appearance: none; width: 16px; height: 16px; border-radius: 5px;
+  border: 1.5px solid var(--line); background: rgba(0,0,0,0.3);
+  cursor: pointer; position: relative; flex-shrink: 0;
+  transition: all .15s;
+}
+.wtog input:checked {
+  background: var(--orange); border-color: var(--orange);
+  box-shadow: 0 0 10px rgba(91,163,255,0.45);
+}
+.wtog input:checked::after {
+  content: ''; position: absolute; left: 4px; top: 1px;
+  width: 5px; height: 9px; border: solid #031a2e; border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.wtog:has(input:checked) { color: var(--orange-soft); border-color: rgba(91,163,255,0.4); }
+
+/* Timeline event editor */
+.tl-event-list { display: flex; flex-direction: column; gap: 8px; max-height: 520px; overflow-y: auto; }
+.tl-row {
+  display: grid; grid-template-columns: 90px 1fr 90px 72px 36px;
+  gap: 8px; align-items: center;
+  padding: 10px 12px; border-radius: 12px;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);
+}
+.tl-row input, .tl-row select {
+  background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border); color: var(--fg);
+  border-radius: 8px; padding: 8px 10px; font-family: var(--mono); font-size: 12px;
+}
+.tl-row .tl-t { font-variant-numeric: tabular-nums; color: var(--orange-soft); font-weight: 700; }
+.tl-row .tl-del {
+  background: transparent; border: 1px solid rgba(255,77,94,0.35); color: var(--red);
+  border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-weight: 800;
+}
+.tl-row .tl-del:hover { background: var(--red-dim); }
+.tl-fmt { font-family: var(--mono); font-size: 11px; color: var(--dim); letter-spacing: 1px; }
+
+/* Availability calendar */
+.avail-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+.avail-tz-label { font-size: 12px; letter-spacing: 1px; color: var(--dim); font-family: var(--mono); display: flex; align-items: center; gap: 8px; }
+.avail-tz-label select {
+  background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border); color: var(--fg);
+  border-radius: 10px; padding: 8px 12px; font-family: var(--mono); font-size: 12px;
+}
+.avail-grid-wrap {
+  overflow: auto; max-height: 520px; border-radius: 14px;
+  border: 1px solid var(--glass-border);
+  background: rgba(0,0,0,0.35);
+}
+.avail-grid {
+  display: grid;
+  grid-template-columns: 56px repeat(7, minmax(72px, 1fr));
+  min-width: 620px;
+  user-select: none;
+}
+.avail-corner { position: sticky; top: 0; left: 0; z-index: 3; background: #0a0c12; }
+.avail-dayh {
+  position: sticky; top: 0; z-index: 2;
+  text-align: center; padding: 10px 4px; font-size: 11px; letter-spacing: 2px;
+  font-weight: 800; color: var(--dim); font-family: var(--mono);
+  background: #0a0c12; border-bottom: 1px solid var(--glass-border);
+}
+.avail-time {
+  position: sticky; left: 0; z-index: 1;
+  font-size: 10px; color: var(--muted); font-family: var(--mono);
+  padding: 0 6px; display: flex; align-items: flex-start; justify-content: flex-end;
+  background: #0a0c12; border-right: 1px solid rgba(255,255,255,0.04);
+  height: 28px;
+}
+.avail-cell {
+  height: 28px; border-right: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  cursor: crosshair; position: relative;
+  transition: background .08s;
+}
+.avail-cell:hover { background: rgba(140, 120, 255, 0.08); }
+.avail-cell.on {
+  background: linear-gradient(160deg, #9b7dff 0%, #7a5cff 100%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
+}
+.avail-cell.paint { background: rgba(155, 125, 255, 0.45); }
+.avail-slot-label {
+  position: absolute; left: 4px; top: 2px; font-size: 9px; font-weight: 700;
+  letter-spacing: 0.5px; color: #fff; pointer-events: none; white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+.avail-manual { margin-top: 12px; }
+.avail-manual .hidden { display: none; }
+.avail-slot-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.avail-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: 8px; font-family: var(--mono); font-size: 11px;
+  background: rgba(155,125,255,0.15); border: 1px solid rgba(155,125,255,0.35); color: #c4b0ff;
+}
+.avail-chip button {
+  background: transparent; border: none; color: #ff8a9a; cursor: pointer; font-weight: 800; font-size: 14px;
+}
+.avail-team { display: flex; flex-direction: column; gap: 12px; }
+.avail-person {
+  padding: 12px 14px; border-radius: 12px; border: 1px solid var(--glass-border);
+  background: rgba(255,255,255,0.03);
+}
+.avail-person .ap-name { font-weight: 800; letter-spacing: 1px; margin-bottom: 6px; }
+.avail-person .ap-slots { font-family: var(--mono); font-size: 12px; color: var(--dim); line-height: 1.6; }
+.hidden { display: none !important; }
+
+
+/* Flight plan animation */
+.fp-stage {
+  position: relative;
+  background: radial-gradient(ellipse at 50% 100%, rgba(30,60,100,0.35), transparent 55%),
+              linear-gradient(180deg, #0a1020 0%, #06080f 100%);
+  min-height: 420px;
+}
+#fpCanvas { width: 100%; height: auto; display: block; }
+.fp-caption {
+  position: absolute; left: 0; right: 0; bottom: 12px;
+  text-align: center; font-family: var(--mono); font-size: 12px;
+  letter-spacing: 2px; color: var(--orange-soft); font-weight: 700;
+  text-transform: uppercase; pointer-events: none;
+}
+
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="login-card hud">
+    <div class="login-logo">
+      <img src="/isa-logo.png" alt="ISA" style="height:64px;width:auto">
+      <h1>MISSION <span>CONTROL</span></h1>
+      <p>// INTERNATIONAL SPACE ASSOCIATION</p>
+    </div>
+    <div id="loginErr"></div>
+    <div class="field">
+      <label>DISPLAY NAME</label>
+      <input id="loginUser" type="text" placeholder="Your callsign" autocomplete="nickname" maxlength="32">
+    </div>
+    <div class="field">
+      <label>PASSWORD</label>
+      <input id="loginPass" type="password" placeholder="••••••••••••" autocomplete="current-password">
+    </div>
+    <button id="btnLogin">ENTER</button>
+    <div id="loginPending" class="hidden" style="margin-top:18px;text-align:center">
+      <div style="font-size:13px;letter-spacing:2px;color:var(--amber);font-family:var(--mono);font-weight:700;margin-bottom:8px">WAITING FOR CEO APPROVAL</div>
+      <div id="loginPendingName" style="color:var(--dim);font-size:13px;margin-bottom:10px"></div>
+      <div style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--amber);box-shadow:0 0 12px var(--amber)"></div>
+      <p style="margin-top:12px;color:var(--muted);font-size:11px;font-family:var(--mono);letter-spacing:1px">Your join request was sent. Stay on this page.</p>
+      <button type="button" class="ghost" id="btnCancelPending" style="margin-top:14px">Cancel</button>
+    </div>
+    <div class="login-foot">AUTHORIZED PERSONNEL ONLY</div>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="titlebar">
+    <div class="tb-brand">
+      <img src="/isa-logo.png" alt="ISA">
+      <b>MISSION <span>CONTROL</span></b>
+    </div>
+    <div class="tb-sub">// LAUNCH CONTROL SYSTEM</div>
+    <div class="tb-right">
+      <div class="conn" id="conn"><span class="dot"></span><span id="connText">OFFLINE</span></div>
+      <div class="utc-clock" id="utcClock">00:00:00 UTC</div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <nav id="nav" style="display:flex">
+      <button data-sec="director" class="active">FLIGHT DIR</button>
+      <button data-sec="booster">BOOSTER</button>
+      <button data-sec="starship">STARSHIP</button>
+      <button data-sec="timeline">TIMELINE</button>
+      <button data-sec="flightplan">FLIGHT PLAN</button>
+      <button data-sec="availability">AVAILABILITY</button>
+      <button data-sec="chat">CHAT</button>
+      <button data-sec="stream">STREAM</button>
+    </nav>
+    <div class="who-strip" id="whoLine">
+      <span class="name">—</span>
+      <span class="title-badge" id="whoTitle"></span>
+      <button id="btnLogout">LOG OUT</button>
+    </div>
+  </div>
+
+  <main class="content">
+    <!-- DIRECTOR -->
+    <div class="section active" id="sec-director">
+
+      <div class="hero hud">
+        <div class="stat"><div class="val" id="sAlt">0 KM</div><div class="lbl">STARSHIP ALTITUDE</div></div>
+        <div class="diamond">◆</div>
+        <div class="clockbox" id="heroClockBox" title="Click to set T-0">
+          <div class="top-clock" id="topClock">T+ 00:00:00</div>
+          <div class="lbl2" id="missionLabel">STARSHIP FLIGHT TEST</div>
+          <div class="hint">CLICK TO SET T-0</div>
+        </div>
+        <div class="diamond">◆</div>
+        <div class="stat"><div class="val" id="sVel">0</div><div class="lbl">STARSHIP SPEED (M/S)</div></div>
+      </div>
+
+      <div class="sysgrid" id="sysStrip">
+        <div class="sysbox" id="sysConn"><span>UPLINK</span><span class="sysdot"></span></div>
+        <div class="sysbox" id="sysBooster"><span>BOOSTER TLM</span><span class="sysdot"></span></div>
+        <div class="sysbox" id="sysStarship"><span>STARSHIP TLM</span><span class="sysdot"></span></div>
+        <div class="sysbox" id="sysTimer"><span>RANGE SAFETY</span><span class="sysdot"></span></div>
+        <div class="sysbox" id="sysPoll"><span>GO/NO-GO</span><span class="sysdot"></span></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3><span class="dot2"></span>BOOSTER</h3>
+          <div class="stat-grid">
+            <div class="stat-pill"><div class="sv" id="bAlt">0 KM</div><div class="sk">ALTITUDE</div></div>
+            <div class="stat-pill"><div class="sv" id="bVel">0</div><div class="sk">M/S</div></div>
+            <div class="stat-pill"><div class="sv" id="bEng">0/33</div><div class="sk">ENGINES</div></div>
+          </div>
+          <div class="kv"><span class="k">V/Speed</span><span class="v" id="bVs">0 m/s</span></div>
+          <div class="kv"><span class="k">Pitch</span><span class="v" id="bPitch">0°</span></div>
+          <div class="age" id="bAge">no telemetry</div>
+        </div>
+        <div class="card">
+          <h3><span class="dot2"></span>STARSHIP</h3>
+          <div class="stat-grid">
+            <div class="stat-pill"><div class="sv" id="sVs2">0 m/s</div><div class="sk">V/SPEED</div></div>
+            <div class="stat-pill"><div class="sv" id="sPitch">0°</div><div class="sk">PITCH</div></div>
+            <div class="stat-pill"><div class="sv" id="sEng">0/6</div><div class="sk">ENGINES</div></div>
+          </div>
+          <div class="age" id="sAge">no telemetry</div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top:14px">
+        <div class="card">
+          <h3><span class="dot2"></span>SET COUNTDOWN</h3>
+          <div class="countdown-display" id="countdownPreview" title="Click to set launch time">00:00:00<span class="cd-hint">CLICK TO SET LAUNCH TIME</span></div>
+          <div class="field-row ceo-only">
+            <input type="datetime-local" id="inT0" step="1">
+            <button id="btnSetT0">Set T-0</button>
+          </div>
+          <div class="preset-row ceo-only">
+            <button data-min="1">1 MIN</button>
+            <button data-min="5">5 MIN</button>
+            <button data-min="10">10 MIN</button>
+            <button data-min="15">15 MIN</button>
+            <button data-min="30">30 MIN</button>
+          </div>
+          <div class="section-label ceo-only">Mission label</div>
+          <div class="field-row ceo-only">
+            <input type="text" id="inLabel" value="STARSHIP FLIGHT TEST">
+            <button id="btnSetLabel">Set</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3><span class="dot2"></span>LAUNCH SEQUENCE</h3>
+          <div class="seq-grid ceo-only" id="ceoCmds">
+            <button class="seq-btn resume" id="btnResume">GO</button>
+            <button class="seq-btn ghost" id="btnReset">STOP</button>
+            <button class="seq-btn hold" id="btnHold">HOLD</button>
+            <button class="seq-btn abort" id="btnAbort">ABORT</button>
+          </div>
+          <div class="cmds dir-booster" style="margin-top:12px">
+            <button class="hold" id="btnReqHoldBooster">HOLD · BOOSTER</button>
+            <button class="abort" id="btnReqAbortBooster">ABORT · BOOSTER</button>
+          </div>
+          <div class="cmds dir-ship" style="margin-top:10px">
+            <button class="hold" id="btnReqHoldShip">HOLD · SHIP</button>
+            <button class="abort" id="btnReqAbortShip">ABORT · SHIP</button>
+          </div>
+          <div class="cmds" id="adminCmds" style="margin-top:10px;display:none">
+            <button class="hold" id="btnReqHold">REQUEST HOLD</button>
+            <button class="abort" id="btnReqScrub">REQUEST SCRUB</button>
+          </div>
+          <div id="requestList" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h3><span class="dot2"></span>LAUNCH SCHEDULE</h3>
+        <div class="sched-counts" id="schedCounts">
+          <div class="sched-count planning"><span class="sc-label">Planning</span><span class="sc-num" id="scPlanning">0</span></div>
+          <div class="sched-count approved"><span class="sc-label">Approved</span><span class="sc-num" id="scApproved">0</span></div>
+          <div class="sched-count scheduled"><span class="sc-label">Scheduled</span><span class="sc-num" id="scScheduled">0</span></div>
+          <div class="sched-count flown"><span class="sc-label">Flown</span><span class="sc-num" id="scFlown">0</span></div>
+          <div class="sched-count scrubbed"><span class="sc-label">Scrubbed</span><span class="sc-num" id="scScrubbed">0</span></div>
+        </div>
+        <div class="ceo-only" id="scheduleAddBox">
+          <div class="field-row" style="flex-wrap:wrap;gap:8px">
+            <input type="text" id="inSchedName" placeholder="Mission name" style="min-width:140px;flex:1">
+            <input type="text" id="inSchedVehicle" placeholder="Vehicle" value="Starship" style="width:110px">
+            <input type="datetime-local" id="inSchedT0" step="1" style="min-width:180px">
+            <input type="text" id="inSchedNote" placeholder="Note (optional)" style="min-width:120px;flex:1">
+            <button id="btnSchedAdd">Add (Planning)</button>
+          </div>
+        </div>
+        <div id="scheduleList" style="margin-top:12px">
+          <div style="color:var(--dim);font-size:13px;letter-spacing:1px;font-family:var(--mono)" id="schedEmpty">NO LAUNCHES</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h3><span class="dot2"></span>GO / NO-GO POLL</h3>
+        <div class="ceo-only" id="pollCreateBox">
+          <div class="stations" id="stationChecks">
+            <label><input type="checkbox" value="Booster" checked> Booster</label>
+            <label><input type="checkbox" value="Starship" checked> Starship</label>
+            <label><input type="checkbox" value="Ground" checked> Ground</label>
+          </div>
+          <div class="field-row">
+            <input type="text" id="inPollTitle" placeholder="Poll title">
+            <button id="btnPollCreate">Initiate</button>
+          </div>
+        </div>
+        <div id="pollLive" style="margin-top:12px">
+          <div style="color:var(--dim);font-size:13px;letter-spacing:1px;font-family:var(--mono)" id="pollEmpty">NO ACTIVE POLL</div>
+          <div id="pollActive" style="display:none">
+            <div style="font-size:17px;font-weight:700;letter-spacing:1px" id="pollTitle">—</div>
+            <div class="poll-stats">
+              <span class="go">GO <span id="pollGo">0</span></span>
+              &nbsp;&nbsp;
+              <span class="nogo">NO-GO <span id="pollNogo">0</span></span>
+            </div>
+            <div class="poll-bar"><div class="g" id="pollBarGo" style="width:0%"></div><div class="n" id="pollBarNogo" style="width:0%"></div></div>
+            <div class="voters" id="pollVoters"></div>
+            <div class="vote-row" id="voteRow">
+              <button class="go-btn" id="btnVoteGo">GO</button>
+              <button class="nogo-btn" id="btnVoteNogo">NO-GO</button>
+            </div>
+            <div class="cmds ceo-only" style="margin-top:10px">
+              <button class="ghost" id="btnPollClose">Close</button>
+              <button class="abort" id="btnPollDelete">Delete</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h3><span class="dot2"></span>EVENT LOG</h3>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+      <div class="card ceo-only hud" id="joinRequestsCard" style="margin-top:14px">
+        <h3><span class="dot2"></span>JOIN REQUESTS</h3>
+        <p style="color:var(--dim);font-size:13px;margin-bottom:10px">Non-CEO operators must be approved before they can enter.</p>
+        <div id="joinRequestList"><p style="color:var(--muted);font-size:13px">No pending requests</p></div>
+      </div>
+
+
+    <div class="section" id="sec-booster">
+      <div class="card hud">
+        <h3><span class="dot2"></span>BOOSTER · LIVE TELEMETRY</h3>
+        <div class="stat-grid">
+          <div class="stat-pill"><div class="sv" id="b2Alt">0 KM</div><div class="sk">ALTITUDE</div></div>
+          <div class="stat-pill"><div class="sv" id="b2Vel">0</div><div class="sk">M/S</div></div>
+          <div class="stat-pill"><div class="sv" id="b2Eng">0/33</div><div class="sk">ENGINES</div></div>
+        </div>
+        <div class="kv"><span class="k">Pitch</span><span class="v" id="b2Pitch">0°</span></div>
+        <div class="kv"><span class="k">V/Speed</span><span class="v" id="b2Vs">0 m/s</span></div>
+        <div class="kv"><span class="k">G-Force</span><span class="v" id="b2G">0.0 g</span></div>
+        <div class="kv"><span class="k">Fuel</span><span class="v" id="b2Fuel">—</span></div>
+        <div class="kv"><span class="k">Oxidizer</span><span class="v" id="b2Ox">—</span></div>
+        <div class="kv"><span class="k">Throttle</span><span class="v" id="b2Thr">—</span></div>
+        <div class="kv"><span class="k">Chamber P</span><span class="v" id="b2Pc">—</span></div>
+        <div class="kv"><span class="k">Status</span><span class="v" id="b2Stat">NOMINAL</span></div>
+        <div class="kv"><span class="k">Code</span><span class="v" id="b2Code">0</span></div>
+        <div class="kv"><span class="k">Battery</span><span class="v" id="b2Bat">100%</span></div>
+        <div class="kv"><span class="k">Signal</span><span class="v" id="b2Sig">100%</span></div>
+        <div class="age" id="b2Age">no telemetry</div>
+      </div>
+    </div>
+
+    <div class="section" id="sec-starship">
+      <div class="card hud">
+        <h3><span class="dot2"></span>STARSHIP · LIVE TELEMETRY</h3>
+        <div class="stat-grid">
+          <div class="stat-pill"><div class="sv" id="s2Alt">0 KM</div><div class="sk">ALTITUDE</div></div>
+          <div class="stat-pill"><div class="sv" id="s2Vel">0</div><div class="sk">M/S</div></div>
+          <div class="stat-pill"><div class="sv" id="s2Eng">0/6</div><div class="sk">ENGINES</div></div>
+        </div>
+        <div class="kv"><span class="k">Pitch</span><span class="v" id="s2Pitch">0°</span></div>
+        <div class="kv"><span class="k">V/Speed</span><span class="v" id="s2Vs">0 m/s</span></div>
+        <div class="kv"><span class="k">G-Force</span><span class="v" id="s2G">0.0 g</span></div>
+        <div class="kv"><span class="k">Fuel</span><span class="v" id="s2Fuel">—</span></div>
+        <div class="kv"><span class="k">Oxidizer</span><span class="v" id="s2Ox">—</span></div>
+        <div class="kv"><span class="k">Throttle</span><span class="v" id="s2Thr">—</span></div>
+        <div class="kv"><span class="k">Chamber P</span><span class="v" id="s2Pc">—</span></div>
+        <div class="kv"><span class="k">Status</span><span class="v" id="s2Stat">NOMINAL</span></div>
+        <div class="kv"><span class="k">Code</span><span class="v" id="s2Code">0</span></div>
+        <div class="kv"><span class="k">Battery</span><span class="v" id="s2Bat">100%</span></div>
+        <div class="kv"><span class="k">Signal</span><span class="v" id="s2Sig">100%</span></div>
+        <div class="age" id="s2Age">no telemetry</div>
+      </div>
+    </div>
+
+    <div class="section" id="sec-timeline">
+      <div class="card hud">
+        <h3><span class="dot2"></span>TIMELINE EVENTS</h3>
+        <p style="color:var(--dim);margin-bottom:14px;font-size:14px;letter-spacing:0.5px">
+          Edit milestones on the stream arc timeline. Time is relative to T-0 in seconds
+          (in <b>minutes</b> relative to T-0; negative = countdown, e.g. <code style="color:var(--orange-soft)">-0.5</code> = T−0:30).
+        </p>
+        <div class="ceo-only field-row" style="margin-bottom:12px">
+          <input type="text" id="tlNewLabel" placeholder="Event label (e.g. MAX-Q)" maxlength="48" style="flex:1.4">
+          <input type="text" id="tlNewT" placeholder="minutes e.g. -0.5 or 2.3" style="max-width:140px">
+          <select id="tlNewPos" style="background:rgba(0,0,0,0.25);border:1px solid var(--glass-border);color:var(--fg);border-radius:10px;padding:10px 12px;font-family:var(--mono)">
+            <option value="above">Above</option>
+            <option value="below">Below</option>
+          </select>
+          <button class="primary" id="btnTlAdd">ADD</button>
+          <button class="ghost" id="btnTlReset" title="Restore default Starship timeline">RESET DEFAULTS</button>
+        </div>
+        <div id="tlEventList" class="tl-event-list"></div>
+        <p class="ceo-only" style="margin-top:12px;color:var(--muted);font-size:11px;letter-spacing:1px;font-family:var(--mono)">CEO only · changes broadcast live to the stream overlay</p>
+      </div>
+    </div>
+
+
+    <div class="section" id="sec-flightplan">
+      <div class="card hud">
+        <h3><span class="dot2"></span>FLIGHT PLAN</h3>
+        <p style="color:var(--dim);margin-bottom:14px;font-size:14px">
+          Choose the recovery profile. Full trajectory animation (Starship V3 profile) lives on the dedicated overlay page — same pattern as Propellant.
+        </p>
+        <div class="section-label ceo-only">Booster recovery</div>
+        <div class="overlay-modes ceo-only" id="fpBoosterModes">
+          <button data-b="catch" class="active">CATCH (TOWER)</button>
+          <button data-b="splashdown">SPLASHDOWN</button>
+        </div>
+        <div class="section-label ceo-only" style="margin-top:16px">Ship recovery</div>
+        <div class="overlay-modes ceo-only" id="fpShipModes">
+          <button data-s="catch" class="active">CATCH (TOWER)</button>
+          <button data-s="splashdown">SPLASHDOWN</button>
+        </div>
+        <p class="ceo-only" style="margin-top:12px;color:var(--muted);font-size:11px;letter-spacing:1px;font-family:var(--mono)" id="fpLabel">Double catch</p>
+        <div class="field-row" style="margin-top:14px">
+          <a class="primary" id="btnFpOpen" href="/flight-plan" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;padding:10px 16px;border-radius:8px">OPEN FLIGHT PLAN OVERLAY</a>
+        </div>
+        <p style="margin-top:12px;color:var(--muted);font-size:12px;line-height:1.45">
+          Overlay URL: <code style="font-family:var(--mono);color:var(--cyan)">/flight-plan</code> · also <code style="font-family:var(--mono);color:var(--cyan)">/fp</code> · <code style="font-family:var(--mono);color:var(--cyan)">/trajectory</code>
+        </p>
+      </div>
+    </div>
+
+    <div class="section" id="sec-availability">
+      <div class="card hud">
+        <h3><span class="dot2"></span>MY AVAILABILITY</h3>
+        <p style="color:var(--dim);margin-bottom:12px;font-size:14px">
+          Mark when you are available. Click and drag on the grid, or use “Add a slot manually”.
+        </p>
+        <div class="avail-toolbar">
+          <label class="avail-tz-label">Timezone
+            <select id="availTz"></select>
+          </label>
+          <button class="ghost btn-sm" id="btnAvailClear">Clear my slots</button>
+          <button class="primary btn-sm" id="btnAvailSave">Save</button>
+        </div>
+        <div class="avail-grid-wrap">
+          <div class="avail-grid" id="availGrid">
+            <div class="avail-corner"></div>
+            <div class="avail-dayh">MON</div>
+            <div class="avail-dayh">TUE</div>
+            <div class="avail-dayh">WED</div>
+            <div class="avail-dayh">THU</div>
+            <div class="avail-dayh">FRI</div>
+            <div class="avail-dayh">SAT</div>
+            <div class="avail-dayh">SUN</div>
+            <!-- time rows filled by JS -->
+          </div>
+        </div>
+        <div class="avail-manual">
+          <button type="button" class="ghost" id="btnAvailManualToggle">▸ Add a slot manually</button>
+          <div id="availManualBox" class="hidden" style="margin-top:10px">
+            <div class="field-row">
+              <select id="availManDay">
+                <option value="0">Mon</option><option value="1">Tue</option><option value="2">Wed</option>
+                <option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option>
+              </select>
+              <input type="time" id="availManStart" value="10:00">
+              <span style="color:var(--dim)">→</span>
+              <input type="time" id="availManEnd" value="12:00">
+              <button class="primary" id="btnAvailManAdd">Add</button>
+            </div>
+          </div>
+        </div>
+        <div id="availMySlots" class="avail-slot-chips" style="margin-top:12px"></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3><span class="dot2"></span>TEAM AVAILABILITY</h3>
+        <div id="availTeamList" class="avail-team"></div>
+      </div>
+    </div>
+
+    <div class="section" id="sec-chat">
+      <div class="card">
+        <h3><span class="dot2"></span>TEAM CHAT</h3>
+        <div class="chat-log" id="chatLog"></div>
+        <div class="field-row" style="margin-top:12px">
+          <input type="text" id="inChat" placeholder="Message…" maxlength="400">
+          <button id="btnChat">Send</button>
+        </div>
+      </div>
+      <div class="card ceo-only" style="margin-top:14px">
+        <h3><span class="dot2"></span>REPORTED MESSAGES</h3>
+        <div id="reportList"></div>
+      </div>
+    </div>
+
+    <div class="section" id="sec-stream">
+      <div class="card hud">
+        <h3><span class="dot2"></span>STREAM OVERLAY</h3>
+        <p style="color:var(--dim);margin-bottom:12px;letter-spacing:1px;font-size:14px">OBS Browser Source URL</p>
+        <a class="stream-link" id="streamLink" href="/stream" target="_blank">/stream</a>
+        <p style="margin-top:14px;color:var(--muted);font-size:12px;letter-spacing:1px;font-family:var(--mono)">SUGGESTED SIZE · 1920 × 240 (with timeline)</p>
+        <div class="section-label ceo-only" style="margin-top:22px">Vehicle program (CEO)</div>
+        <div class="overlay-modes ceo-only" id="programModes">
+          <button data-program="starship" class="active">STARSHIP</button>
+          <button data-program="eclipse">ECLIPSE (FALCON 9)</button>
+        </div>
+        <p class="ceo-only" style="margin-top:8px;color:var(--muted);font-size:11px;letter-spacing:1px;font-family:var(--mono)" id="programHint">STARSHIP · Booster 33 eng + Ship 6 eng</p>
+
+        <div class="section-label ceo-only" style="margin-top:22px">Overlay layout (CEO)</div>
+        <div class="overlay-modes ceo-only" id="overlayModes">
+          <button data-mode="auto">AUTO</button>
+          <button data-mode="countdown">COUNTDOWN</button>
+          <button data-mode="full">FULL LAYOUT</button>
+          <button data-mode="booster" id="ovBtnBooster">BOOSTER ENGINES</button>
+          <button data-mode="ship" id="ovBtnShip">SHIP ENGINES</button>
+        </div>
+        <p class="ceo-only" style="margin-top:10px;color:var(--muted);font-size:11px;letter-spacing:1px;font-family:var(--mono)" id="overlayHint">AUTO · shows countdown until T-0:15, then full bar</p>
+
+        <div class="section-label ceo-only" style="margin-top:26px">Customize what shows (CEO)</div>
+        <div class="widget-toggles ceo-only" id="widgetToggles">
+          <label class="wtog"><input type="checkbox" data-w="timeline" checked> Timeline</label>
+          <label class="wtog"><input type="checkbox" data-w="boosterEngines" checked> Booster engines</label>
+          <label class="wtog"><input type="checkbox" data-w="shipEngines" checked> Ship engines</label>
+          <label class="wtog"><input type="checkbox" data-w="gauges" checked> Altitude &amp; speed gauges</label>
+          <label class="wtog"><input type="checkbox" data-w="cornerClock" checked> Corner countdown badge</label>
+        </div>
+        <p class="ceo-only" style="margin-top:10px;color:var(--muted);font-size:11px;letter-spacing:1px;font-family:var(--mono)">Toggle individual elements on the stream overlay independently of layout mode</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  let auth=null, state=null, ws=null, skew=0, skewReady=false
+  try{const s=JSON.parse(localStorage.getItem('mc3_auth')||'null'); if(s&&s.token) auth=s}catch{}
+
+  function pad(n){return String(n).padStart(2,'0')}
+  function fmt(ms){ms=Math.abs(ms);const sec=Math.floor(ms/1000);return pad(Math.floor(sec/3600))+':'+pad(Math.floor((sec%3600)/60))+':'+pad(sec%60)}
+  function elapsed(t){if(!t.running)return t.elapsedMs;return t.elapsedMs+(Date.now()-skew-t.startTimestamp)}
+  function send(action,extra){if(!ws||ws.readyState!==1||!auth)return;ws.send(JSON.stringify({type:'cmd',action,...extra}))}
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  function fmtMt(m){
+    // values are meters → always KM (÷ 1000)
+    // e.g. 95 m → 0.1 KM, 500 m → 0.5 KM, 1500 m → 1.5 KM
+    const n=Number(m)||0
+    const km=n/1000
+    const a=Math.abs(km)
+    if(a>=100) return Math.round(km).toLocaleString()+' KM'
+    if(a>=10) return (Math.round(km*10)/10)+' KM'
+    return (Math.round(km*10)/10)+' KM'
+  }
+
+  function applyRole(){
+    const r=auth&&auth.role
+    document.querySelectorAll('.ceo-only').forEach(el=>el.classList.toggle('locked', r!=='ceo'))
+    document.querySelectorAll('.dir-booster').forEach(el=>el.classList.toggle('locked', !(r==='booster_director'||r==='ceo')))
+    document.querySelectorAll('.dir-ship').forEach(el=>el.classList.toggle('locked', !(r==='ship_director'||r==='ceo')))
+    document.getElementById('adminCmds').style.display = (r==='admin') ? 'flex' : 'none'
+    document.querySelector('#whoLine .name').textContent = auth?auth.name:'—'
+    const tb=document.getElementById('whoTitle')
+    tb.textContent = auth?(auth.title||auth.role):''
+    tb.className = 'title-badge ' + (auth?auth.role:'')
+  }
+
+  function showApp(){document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');applyRole();connect()}
+  function showLogin(err){document.getElementById('login').classList.remove('hidden');document.getElementById('app').classList.add('hidden');document.getElementById('loginErr').textContent=err||'';auth=null;localStorage.removeItem('mc3_auth')}
+
+  let pendingPollTimer=null
+  async function doLogin(){
+    const username=(document.getElementById('loginUser').value||'').trim()
+    const password=document.getElementById('loginPass').value||''
+    document.getElementById('loginErr').textContent=''
+    if(!password){document.getElementById('loginErr').textContent='Password required';return}
+    try{
+      const res=await fetch(location.origin+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({displayName:username,password})})
+      const data=await res.json()
+      if(!data.ok){document.getElementById('loginErr').textContent=data.error||'Login failed';return}
+      if(data.immediate && data.token){
+        auth={token:data.token,role:data.role,name:data.name,title:data.title}
+        localStorage.setItem('mc3_auth',JSON.stringify(auth))
+        document.getElementById('loginPending').classList.add('hidden')
+        showApp()
+        return
+      }
+      // Waiting for CEO approval
+      document.getElementById('btnLogin').classList.add('hidden')
+      document.getElementById('loginPending').classList.remove('hidden')
+      document.getElementById('loginPendingName').textContent=(data.name||username)+' · '+(data.title||data.role||'')
+      const pid=data.pendingId
+      if(pendingPollTimer) clearInterval(pendingPollTimer)
+      pendingPollTimer=setInterval(async()=>{
+        try{
+          const r=await fetch(location.origin+'/api/join-status?id='+encodeURIComponent(pid))
+          const st=await r.json()
+          if(st.status==='approved' && st.token){
+            clearInterval(pendingPollTimer); pendingPollTimer=null
+            auth={token:st.token,role:st.role,name:st.name,title:st.title}
+            localStorage.setItem('mc3_auth',JSON.stringify(auth))
+            document.getElementById('loginPending').classList.add('hidden')
+            document.getElementById('btnLogin').classList.remove('hidden')
+            showApp()
+          } else if(st.status==='denied'){
+            clearInterval(pendingPollTimer); pendingPollTimer=null
+            document.getElementById('loginPending').classList.add('hidden')
+            document.getElementById('btnLogin').classList.remove('hidden')
+            document.getElementById('loginErr').textContent='Join request denied by CEO'
+          }
+        }catch{}
+      },1500)
+    }catch{document.getElementById('loginErr').textContent='Cannot reach server'}
+  }
+  document.getElementById('btnCancelPending')&&(document.getElementById('btnCancelPending').onclick=()=>{
+    if(pendingPollTimer) clearInterval(pendingPollTimer); pendingPollTimer=null
+    document.getElementById('loginPending').classList.add('hidden')
+    document.getElementById('btnLogin').classList.remove('hidden')
+  })
+  document.getElementById('btnLogin').onclick=doLogin
+  document.getElementById('loginPass').onkeydown=e=>{if(e.key==='Enter')doLogin()}
+  document.getElementById('loginUser').onkeydown=e=>{if(e.key==='Enter')document.getElementById('loginPass').focus()}
+  document.getElementById('btnLogout').onclick=()=>{showLogin('');if(ws)try{ws.close()}catch{}}
+
+  document.querySelectorAll('#nav button').forEach(btn=>{
+    btn.onclick=()=>{
+      document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'))
+      btn.classList.add('active')
+      document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'))
+      document.getElementById('sec-'+btn.dataset.sec).classList.add('active')
+    }
+  })
+  document.getElementById('streamLink').href=location.origin+'/stream'
+  document.getElementById('streamLink').textContent=location.origin+'/stream'
+
+  const OVERLAY_HINTS = {
+    auto: 'AUTO · shows countdown until T-0:15, then full bar',
+    countdown: 'COUNTDOWN · center clock only, sides hidden',
+    full: 'FULL LAYOUT · both stages always visible',
+    booster: 'STAGE 1 ENGINES · stage 1 focused',
+    ship: 'STAGE 2 ENGINES · stage 2 focused'
+  }
+  document.querySelectorAll('#overlayModes button').forEach(btn=>{
+    btn.onclick=()=>{
+      if(!(auth&&auth.role==='ceo')) return
+      send('setOverlayMode',{mode:btn.dataset.mode})
+    }
+  })
+  function updateOverlayUI(mode){
+    mode = mode || 'auto'
+    document.querySelectorAll('#overlayModes button').forEach(b=>{
+      b.classList.toggle('active', b.dataset.mode===mode)
+    })
+    const hint=document.getElementById('overlayHint')
+    if(hint) hint.textContent = OVERLAY_HINTS[mode] || OVERLAY_HINTS.auto
+  }
+
+  // Widget visibility toggles (CEO) — timeline, engines, gauges, corner clock
+  const DEFAULT_WIDGETS = { timeline:true, boosterEngines:true, shipEngines:true, gauges:true, cornerClock:true }
+  document.querySelectorAll('#widgetToggles input[data-w]').forEach(inp=>{
+    inp.onchange=()=>{
+      if(!(auth&&auth.role==='ceo')) return
+      const next = {}
+      document.querySelectorAll('#widgetToggles input[data-w]').forEach(i=>{
+        next[i.dataset.w] = !!i.checked
+      })
+      send('setWidgets', { widgets: next })
+    }
+  })
+  function updateWidgetsUI(w){
+    w = Object.assign({}, DEFAULT_WIDGETS, w || {})
+    document.querySelectorAll('#widgetToggles input[data-w]').forEach(inp=>{
+      const key = inp.dataset.w
+      inp.checked = w[key] !== false
+    })
+  }
+
+  // Vehicle program switcher (Starship ↔ Eclipse/Falcon 9)
+  document.querySelectorAll('#programModes button').forEach(btn=>{
+    btn.onclick=()=>{
+      if(!(auth&&auth.role==='ceo')) return
+      send('setVehicleProgram',{program:btn.dataset.program})
+    }
+  })
+  function updateProgramUI(prog, meta){
+    prog = prog || 'starship'
+    meta = meta || {name:'Starship', stage1Name:'BOOSTER', stage2Name:'STARSHIP', stage1Engines:33, stage2Engines:6}
+    document.querySelectorAll('#programModes button').forEach(b=>{
+      b.classList.toggle('active', b.dataset.program===prog)
+    })
+    const hint=document.getElementById('programHint')
+    if(hint) hint.textContent = meta.name + ' · ' + meta.stage1Name + ' ' + meta.stage1Engines + ' eng + ' + meta.stage2Name + ' ' + meta.stage2Engines + ' eng'
+    // Dynamic labels across the panel
+    const s1 = meta.stage1Name || 'BOOSTER'
+    const s2 = meta.stage2Name || 'STARSHIP'
+    const setTxt = (id,t)=>{const el=document.getElementById(id); if(el) el.textContent=t}
+    // Hero & sys strip
+    const sAltLbl = document.querySelector('#sAlt')?.parentElement?.querySelector('.lbl')
+    if(sAltLbl) sAltLbl.textContent = s2 + ' ALTITUDE'
+    const sVelLbl = document.querySelector('#sVel')?.parentElement?.querySelector('.lbl')
+    if(sVelLbl) sVelLbl.textContent = s2 + ' SPEED (M/S)'
+    const sysB = document.querySelector('#sysBooster span')
+    if(sysB) sysB.textContent = s1 + ' TLM'
+    const sysS = document.querySelector('#sysStarship span')
+    if(sysS) sysS.textContent = s2 + ' TLM'
+    // Cards
+    document.querySelectorAll('#sec-director .card h3, #sec-booster h3, #sec-starship h3').forEach((h,i)=>{
+      // leave structure, update via specific ids below
+    })
+    // Specific stage titles
+    const dirCards = document.querySelectorAll('#sec-director .grid-2 > .card h3')
+    if(dirCards[0]) dirCards[0].innerHTML = '<span class="dot2"></span>' + s1
+    if(dirCards[1]) dirCards[1].innerHTML = '<span class="dot2"></span>' + s2
+    const bSec = document.querySelector('#sec-booster h3')
+    if(bSec) bSec.innerHTML = '<span class="dot2"></span>' + s1 + ' · LIVE TELEMETRY'
+    const sSec = document.querySelector('#sec-starship h3')
+    if(sSec) sSec.innerHTML = '<span class="dot2"></span>' + s2 + ' · LIVE TELEMETRY'
+    // Nav buttons
+    const navB = document.querySelector('#nav button[data-sec="booster"]')
+    if(navB) navB.textContent = s1
+    const navS = document.querySelector('#nav button[data-sec="starship"]')
+    if(navS) navS.textContent = s2
+    // Overlay mode button labels
+    const ovB = document.getElementById('ovBtnBooster')
+    if(ovB) ovB.textContent = s1 + ' ENGINES'
+    const ovS = document.getElementById('ovBtnShip')
+    if(ovS) ovS.textContent = s2 + ' ENGINES'
+    // Hold/Abort buttons
+    const hb = document.getElementById('btnReqHoldBooster')
+    if(hb) hb.textContent = 'HOLD · ' + s1
+    const ab = document.getElementById('btnReqAbortBooster')
+    if(ab) ab.textContent = 'ABORT · ' + s1
+    const hs = document.getElementById('btnReqHoldShip')
+    if(hs) hs.textContent = 'HOLD · ' + s2
+    const as_ = document.getElementById('btnReqAbortShip')
+    if(as_) as_.textContent = 'ABORT · ' + s2
+  }
+
+  function ageText(ms){
+    if(ms==null) return {t:'no telemetry',c:'dead'}
+    if(ms<1500) return {t:'● live',c:'live'}
+    if(ms<5000) return {t:Math.round(ms/1000)+'s ago',c:'stale'}
+    return {t:Math.round(ms/1000)+'s ago',c:'dead'}
+  }
+  function setAge(id,ms){const a=ageText(ms);const el=document.getElementById(id);if(el){el.textContent=a.t;el.className='age '+a.c}}
+
+  // real-world UTC clock, independent of mission timer
+  setInterval(()=>{
+    const el=document.getElementById('utcClock')
+    if(el) el.textContent=new Date().toISOString().slice(11,19)+' UTC'
+  },1000)
+
+  // quick countdown presets (CEO) — sets T-0 to now + N minutes
+  document.querySelectorAll('.preset-row button[data-min]').forEach(btn=>{
+    btn.onclick=()=>{
+      if(!(auth&&auth.role==='ceo')) return
+      const mins=Number(btn.dataset.min)||5
+      const iso=new Date(Date.now()-skew+mins*60000).toISOString()
+      send('setT0',{iso})
+    }
+  })
+
+  // Click countdown / hero clock → prompt minutes until launch (CEO)
+  function promptSetLaunch(){
+    if(!(auth&&auth.role==='ceo')) return
+    const raw=prompt('Minutes until T-0 (e.g. 15 or 0.5 for 30s). Leave blank to cancel.','10')
+    if(raw==null) return
+    const mins=parseFloat(String(raw).replace(',','.'))
+    if(!isFinite(mins)||mins<0){alert('Enter a valid number of minutes');return}
+    const iso=new Date(Date.now()-skew+mins*60000).toISOString()
+    send('setT0',{iso})
+    // also fill datetime field for reference
+    try{
+      const el=document.getElementById('inT0')
+      if(el){
+        const d=new Date(iso)
+        const local=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,19)
+        el.value=local
+      }
+    }catch{}
+  }
+  const cdpEl=document.getElementById('countdownPreview')
+  if(cdpEl) cdpEl.onclick=promptSetLaunch
+  const heroBox=document.getElementById('heroClockBox')
+  if(heroBox) heroBox.onclick=promptSetLaunch
+
+  // Stable signatures so we only rebuild interactive lists when data actually changes
+  // (rebuilding every frame was destroying REPORT/DELETE buttons mid-click)
+  let _sigReq='', _sigLog='', _sigChat='', _sigRep='', _sigSched=''
+
+  function render(){
+    if(!state) return
+    updateOverlayUI(state.overlayMode)
+    updateProgramUI(state.vehicleProgram, state.programMeta)
+    updateWidgetsUI(state.widgets)
+    renderTimelineList(state.timelineEvents)
+    renderJoinRequests(state.pendingJoins)
+    if (state.flightPlan) updateFlightPlanUI(state.flightPlan)
+    if (document.getElementById('sec-availability') && document.getElementById('sec-availability').classList.contains('active')) {
+      renderTeamAvailability()
+    }
+    // One-shot load of my slots when auth+state ready and local empty
+    if (auth && state.availability && !window.__availLoaded) {
+      window.__availLoaded = true
+      loadMyAvailabilityFromState()
+    }
+    const t=state.timer
+    const e=elapsed(t)
+    let text, remainMs
+    if(t.mode==='down'){remainMs=t.totalMs-e}
+    else {remainMs=null}
+    if(t.aborted){text='T-ABORT'}
+    else if(t.hold){text='T-HOLD'}
+    else if(t.mode==='down'){text=remainMs>0?'T- '+fmt(remainMs):'T+ '+fmt(e-t.totalMs)}
+    else {text='T+ '+fmt(e)}
+    const c=document.getElementById('topClock')
+    c.textContent=text
+    c.className='top-clock'+(t.aborted?' abort':t.hold?' hold':'')
+    document.getElementById('missionLabel').textContent=t.label||'MISSION'
+    const cdp=document.getElementById('countdownPreview')
+    if(cdp){
+      const timeStr = t.aborted ? 'ABORT' : t.hold ? 'HOLD' : (remainMs!=null ? fmt(remainMs) : fmt(e))
+      // keep structure: time + hint
+      let timeNode=cdp.childNodes[0]
+      if(!timeNode||timeNode.nodeType!==3){
+        cdp.innerHTML=''
+        timeNode=document.createTextNode(timeStr)
+        cdp.appendChild(timeNode)
+        const hint=document.createElement('span');hint.className='cd-hint';hint.textContent='CLICK TO SET LAUNCH TIME'
+        cdp.appendChild(hint)
+      } else {
+        timeNode.textContent=timeStr
+      }
+    }
+
+    const b=state.vehicle.booster, s=state.vehicle.starship
+    const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v}
+    const pct=(v)=> (v==null||v===0) ? '—' : Math.round(v)+'%'
+    set('bAlt',fmtMt(b.altitude))
+    set('bVel',Math.round(b.velocity||0))
+    set('bVs',Math.round(b.vspeed||0)+' m/s')
+    set('bPitch',Math.round(b.pitch||0)+'°')
+    set('bEng',(b.enginesLit||0)+'/'+(b.enginesTotal||33))
+    set('sAlt',fmtMt(s.altitude))
+    set('sVel',Math.round(s.velocity||0))
+    set('sVs2',Math.round(s.vspeed||0)+' m/s')
+    set('sPitch',Math.round(s.pitch||0)+'°')
+    set('sEng',(s.enginesLit||0)+'/'+(s.enginesTotal||6))
+    set('b2Alt',fmtMt(b.altitude))
+    set('b2Vel',Math.round(b.velocity||0))
+    set('b2Eng',(b.enginesLit||0)+'/'+(b.enginesTotal||33))
+    set('b2Pitch',Math.round(b.pitch||0)+'°')
+    set('b2Vs',Math.round(b.vspeed||0)+' m/s')
+    set('b2G',((b.gforce||0).toFixed(1))+' g')
+    set('b2Fuel',pct(b.fuelPct))
+    set('b2Ox',pct(b.oxPct))
+    set('b2Thr',pct(b.throttle))
+    set('b2Pc', b.chamberPressure ? Math.round(b.chamberPressure)+' bar' : '—')
+    set('b2Stat', b.statusText || 'NOMINAL')
+    set('b2Code', b.statusCode != null ? b.statusCode : 0)
+    set('b2Bat', pct(b.battery))
+    set('b2Sig', pct(b.signal))
+    set('s2Alt',fmtMt(s.altitude))
+    set('s2Vel',Math.round(s.velocity||0))
+    set('s2Eng',(s.enginesLit||0)+'/'+(s.enginesTotal||6))
+    set('s2Pitch',Math.round(s.pitch||0)+'°')
+    set('s2Vs',Math.round(s.vspeed||0)+' m/s')
+    set('s2G',((s.gforce||0).toFixed(1))+' g')
+    set('s2Fuel',pct(s.fuelPct))
+    set('s2Ox',pct(s.oxPct))
+    set('s2Thr',pct(s.throttle))
+    set('s2Pc', s.chamberPressure ? Math.round(s.chamberPressure)+' bar' : '—')
+    set('s2Stat', s.statusText || 'NOMINAL')
+    set('s2Code', s.statusCode != null ? s.statusCode : 0)
+    set('s2Bat', pct(s.battery))
+    set('s2Sig', pct(s.signal))
+
+    const age=state.telemetryAge||{}
+    setAge('bAge',age.booster); setAge('sAge',age.starship)
+    setAge('b2Age',age.booster); setAge('s2Age',age.starship)
+
+    // systems status strip
+    function sys(id,ok,warn){
+      const el=document.getElementById(id); if(!el) return
+      el.classList.remove('go','nogo','warn')
+      el.classList.add(warn?'warn':(ok?'go':'nogo'))
+    }
+    sys('sysConn', !!(ws&&ws.readyState===1))
+    sys('sysBooster', age.booster!=null && age.booster<5000, age.booster!=null && age.booster>=1500 && age.booster<5000)
+    sys('sysStarship', age.starship!=null && age.starship<5000, age.starship!=null && age.starship>=1500 && age.starship<5000)
+    sys('sysTimer', !t.aborted, t.hold)
+    sys('sysPoll', !!(state.poll&&state.poll.open))
+
+    const p=state.poll
+    const empty=document.getElementById('pollEmpty'), active=document.getElementById('pollActive')
+    if(!p){empty.style.display='';active.style.display='none'}
+    else{
+      empty.style.display='none';active.style.display=''
+      document.getElementById('pollTitle').textContent=p.title+(p.open?'':' (closed)')
+      document.getElementById('pollGo').textContent=p.go
+      document.getElementById('pollNogo').textContent=p.nogo
+      const total=Math.max(1,p.total||0)
+      document.getElementById('pollBarGo').style.width=(100*(p.go||0)/total)+'%'
+      document.getElementById('pollBarNogo').style.width=(100*(p.nogo||0)/total)+'%'
+      const votes=p.votes||{}
+      document.getElementById('pollVoters').textContent=Object.keys(votes).length?Object.entries(votes).map(([n,v])=>n+'='+v.toUpperCase()).join(' · '):'No votes yet'
+      document.getElementById('voteRow').style.display=p.open?'flex':'none'
+    }
+
+    // —— Launch schedule counts (always update numbers)
+    const sc=state.scheduleCounts||{}
+    const setSc=(id,n)=>{const el=document.getElementById(id);if(el)el.textContent=n||0}
+    setSc('scPlanning',sc.planning); setSc('scApproved',sc.approved)
+    setSc('scScheduled',sc.scheduled); setSc('scFlown',sc.flown); setSc('scScrubbed',sc.scrubbed)
+
+    // —— Launch schedule list
+    const sched=state.schedule||[]
+    const isCeoSched=auth&&auth.role==='ceo'
+    const sigSched=sched.map(e=>e.id+':'+e.status+':'+e.t0Utc).join('|')+(isCeoSched?'|ceo':'')
+    if(sigSched!==_sigSched){
+      _sigSched=sigSched
+      const list=document.getElementById('scheduleList')
+      if(!list){/* skip */}
+      else if(!sched.length){
+        list.innerHTML='<div style="color:var(--dim);font-size:13px;letter-spacing:1px;font-family:var(--mono)" id="schedEmpty">NO LAUNCHES</div>'
+      } else {
+        list.innerHTML=''
+        sched.forEach(e=>{
+          const stName=e.status||'planning'
+          const div=document.createElement('div')
+          div.className='sched-item '+stName
+          const t0str=e.t0Utc?new Date(e.t0Utc).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'medium'}):'T-0 not set'
+          let eta=''
+          if(e.t0Utc){
+            const delta=e.t0Utc-Date.now()
+            const abs=Math.abs(delta)
+            const h=Math.floor(abs/3600000), m=Math.floor((abs%3600000)/60000)
+            eta=delta>=0?('T- '+h+'h '+m+'m'):('T+ '+h+'h '+m+'m')
+          }
+          const main=document.createElement('div');main.className='sched-main'
+          main.innerHTML='<div class="sched-name">'+esc(e.name)+'</div><div class="sched-meta">'+esc(e.vehicle||'')+' · '+t0str+(eta?' · '+eta:'')+(e.note?' · '+esc(e.note):'')+'</div>'
+          const st=document.createElement('span');st.className='sched-status '+stName;st.textContent=stName.toUpperCase()
+          div.appendChild(main);div.appendChild(st)
+          if(isCeoSched){
+            const acts=document.createElement('div');acts.className='sched-actions'
+            // Approve (CEO only) — only from planning
+            if(stName==='planning'){
+              const ap=document.createElement('button');ap.textContent='APPROVE';ap.title='CEO only'
+              ap.style.borderColor='var(--green)';ap.style.color='var(--green)'
+              ap.onclick=()=>send('scheduleApprove',{id:e.id})
+              acts.appendChild(ap)
+            }
+            // Move approved → scheduled + load T-0
+            if(stName==='approved'||stName==='scheduled'||stName==='planning'){
+              const load=document.createElement('button');load.textContent='LOAD T-0'
+              load.title='Load into active countdown (sets Scheduled)'
+              load.onclick=()=>send('scheduleLoad',{id:e.id})
+              acts.appendChild(load)
+            }
+            if(stName!=='flown'&&stName!=='scrubbed'){
+              const flown=document.createElement('button');flown.textContent='FLOWN';flown.className='ghost'
+              flown.onclick=()=>send('scheduleSetStatus',{id:e.id,status:'flown'})
+              acts.appendChild(flown)
+            }
+            if(stName!=='scrubbed'){
+              const scrub=document.createElement('button');scrub.textContent='SCRUB';scrub.className='abort'
+              scrub.onclick=()=>send('scheduleSetStatus',{id:e.id,status:'scrubbed'})
+              acts.appendChild(scrub)
+            }
+            const del=document.createElement('button');del.textContent='DEL';del.className='abort'
+            del.onclick=()=>{if(confirm('Delete '+e.name+'?'))send('scheduleDelete',{id:e.id})}
+            acts.appendChild(del)
+            div.appendChild(acts)
+          }
+          list.appendChild(div)
+        })
+      }
+    }
+
+    // —— Requests (only rebuild when list changes)
+    const reqs=state.requests||[]
+    const sigReq=reqs.map(r=>r.id+(auth&&auth.role==='ceo'?'1':'0')).join('|')
+    if(sigReq!==_sigReq){
+      _sigReq=sigReq
+      const list=document.getElementById('requestList')
+      list.innerHTML=''
+      reqs.slice().reverse().forEach(r=>{
+        const div=document.createElement('div');div.className='req'
+        const tag=r.type==='hold'?'tag-hold':'tag-abort'
+        div.innerHTML='<div style="flex:1;min-width:0"><span class="'+tag+'">'+r.type.toUpperCase()+'</span> · '+(r.scope||'')+' · '+(r.title||'')+' '+(r.by||'')+(r.note?' — '+esc(r.note):'')+'</div>'
+        if(auth&&auth.role==='ceo'){
+          const b=document.createElement('button');b.className='btn-sm';b.textContent='Dismiss'
+          b.onclick=()=>send('requestResolve',{id:r.id});div.appendChild(b)
+        }
+        list.appendChild(div)
+      })
+    }
+
+    // —— Event log
+    const logs=state.log||[]
+    const sigLog=logs.map(l=>l.t+':'+l.text).join('|')
+    if(sigLog!==_sigLog){
+      _sigLog=sigLog
+      document.getElementById('log').innerHTML=logs.map(l=>'<div>['+new Date(l.t).toLocaleTimeString()+'] '+esc(l.text)+'</div>').join('')
+    }
+
+    // —— Chat (only rebuild when messages or role change — fixes REPORT/DELETE clicks)
+    const chats=state.chat||[]
+    const isCeo=auth&&auth.role==='ceo'
+    const sigChat=chats.map(m=>m.id).join(',')+(isCeo?'|ceo':'')
+    if(sigChat!==_sigChat){
+      _sigChat=sigChat
+      const chatEl=document.getElementById('chatLog')
+      const wasAtBottom=chatEl.scrollHeight-chatEl.scrollTop-chatEl.clientHeight<40
+      chatEl.innerHTML=''
+      chats.forEach(m=>{
+        const div=document.createElement('div');div.className='row'
+        const left=document.createElement('div');left.style.flex='1';left.style.minWidth='0'
+        left.innerHTML='<span class="who">'+esc(m.name)+'</span> <span class="title">'+esc(m.title||'')+'</span> · '+esc(m.text)
+        const actions=document.createElement('div');actions.style.display='flex';actions.style.gap='4px';actions.style.flexShrink='0'
+        const btn=document.createElement('button');btn.className='report-btn';btn.textContent='REPORT'
+        btn.type='button'
+        btn.onclick=(ev)=>{ev.stopPropagation();const reason=prompt('Reason?')||'Inappropriate';send('chatReport',{msgId:m.id,reason})}
+        actions.appendChild(btn)
+        if(isCeo){
+          const del=document.createElement('button');del.className='report-btn';del.textContent='DELETE'
+          del.type='button'
+          del.style.borderColor='var(--red)';del.style.color='var(--red)'
+          del.onclick=(ev)=>{ev.stopPropagation();send('chatDelete',{msgId:m.id})}
+          actions.appendChild(del)
+        }
+        div.appendChild(left);div.appendChild(actions);chatEl.appendChild(div)
+      })
+      if(wasAtBottom) chatEl.scrollTop=chatEl.scrollHeight
+    }
+
+    // —— Reports (CEO panel)
+    const rl=document.getElementById('reportList')
+    if(rl){
+      const reps=state.reports||[]
+      const sigRep=reps.map(r=>r.id).join(',')+(isCeo?'|ceo':'')
+      if(sigRep!==_sigRep){
+        _sigRep=sigRep
+        if(!reps.length){
+          rl.innerHTML='<div style="color:var(--dim);font-size:13px;letter-spacing:1px">No reports</div>'
+        } else {
+          rl.innerHTML=''
+          reps.slice().reverse().forEach(r=>{
+            const d=document.createElement('div');d.className='report-item'
+            d.innerHTML='<div class="meta">By '+esc(r.by)+' · '+esc(r.reason)+'</div><div><b>'+esc((r.msgSnapshot&&r.msgSnapshot.name)||'?')+'</b>: '+esc((r.msgSnapshot&&r.msgSnapshot.text)||'')+'</div>'
+            if(isCeo){
+              const row=document.createElement('div');row.style.marginTop='6px';row.style.display='flex';row.style.gap='6px'
+              const hide=document.createElement('button');hide.className='btn-sm';hide.textContent='Hide';hide.type='button'
+              hide.onclick=(ev)=>{ev.stopPropagation();send('chatHide',{msgId:r.msgId})}
+              const dis=document.createElement('button');dis.className='btn-sm';dis.textContent='Dismiss';dis.type='button'
+              dis.onclick=(ev)=>{ev.stopPropagation();send('reportDismiss',{id:r.id})}
+              row.appendChild(hide);row.appendChild(dis);d.appendChild(row)
+            }
+            rl.appendChild(d)
+          })
+        }
+      }
+    }
+  }
+  requestAnimationFrame(function tick(){try{render()}catch(e){console.error(e)}requestAnimationFrame(tick)})
+
+  let _wsGen = 0
+  function connect(){
+    const gen = ++_wsGen
+    try { if (ws) { ws.onclose = null; ws.onerror = null; ws.close() } } catch {}
+    const proto=location.protocol==='https:'?'wss:':'ws:'
+    ws=new WebSocket(proto+'//'+location.host+'/')
+    const conn=document.getElementById('conn')
+    const ct=document.getElementById('connText')
+    ws.onopen=()=>{ if (gen !== _wsGen) return; conn.className='conn on';ct.textContent='ONLINE';if(auth&&auth.token)ws.send(JSON.stringify({type:'auth',token:auth.token}))}
+    ws.onclose=()=>{ if (gen !== _wsGen) return; conn.className='conn';ct.textContent='RECONNECTING';setTimeout(()=>{ if (gen === _wsGen) connect() },1200)}
+    ws.onerror=()=>{ try { ws.close() } catch {} }
+    ws.onmessage=ev=>{
+      let msg;try{msg=JSON.parse(ev.data)}catch{return}
+      if(msg.type==='auth_fail'){showLogin('Session expired');return}
+      if(msg.type==='error'){
+        // brief non-blocking feedback so CEO/report actions aren't silent on failure
+        const errEl=document.getElementById('loginErr')
+        const toast=document.createElement('div')
+        toast.textContent=msg.message||'Error'
+        toast.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:300;background:var(--red-dim);border:1px solid var(--red);color:var(--fg);padding:10px 18px;border-radius:4px;font-family:var(--mono);font-size:12px;letter-spacing:1px;pointer-events:none'
+        document.body.appendChild(toast)
+        setTimeout(()=>toast.remove(),2800)
+        return
+      }
+      if(msg.type==='state'){
+        state=msg
+        if(msg.serverNow){
+          const sample=Date.now()-msg.serverNow
+          // sync once, then only accept lower (lower-latency) samples; never jump up on laggy packets
+          if(!skewReady){skew=sample;skewReady=true}
+          else if(sample<skew) skew=sample
+        }
+      }
+      if(msg.type==='auth_ok'&&auth){auth.role=msg.role;auth.name=msg.name;auth.title=msg.title;applyRole()}
+    }
+
+  }
+
+  document.getElementById('btnResume').onclick=()=>send('resume')
+  document.getElementById('btnHold').onclick=()=>send('hold')
+  document.getElementById('btnAbort').onclick=()=>send('abort')
+  document.getElementById('btnReset').onclick=()=>send('reset')
+  document.getElementById('btnSetT0').onclick=()=>{const v=document.getElementById('inT0').value;if(v)send('setT0',{iso:new Date(v).toISOString()})}
+  document.getElementById('btnSetLabel').onclick=()=>send('setLabel',{label:document.getElementById('inLabel').value})
+  document.getElementById('btnSchedAdd').onclick=()=>{
+    const name=(document.getElementById('inSchedName').value||'').trim()||'Flight Test'
+    const vehicle=(document.getElementById('inSchedVehicle').value||'').trim()||'Starship'
+    const note=(document.getElementById('inSchedNote').value||'').trim()
+    const v=document.getElementById('inSchedT0').value
+    const payload={name,vehicle,note}
+    if(v) payload.iso=new Date(v).toISOString()
+    send('scheduleAdd',payload)
+    document.getElementById('inSchedName').value=''
+    document.getElementById('inSchedNote').value=''
+  }
+  document.getElementById('btnPollCreate').onclick=()=>{
+    const stations=[...document.querySelectorAll('#stationChecks input:checked')].map(c=>c.value)
+    send('pollCreate',{title:document.getElementById('inPollTitle').value||'GO / NO-GO',stations})
+  }
+  document.getElementById('btnPollClose').onclick=()=>send('pollClose')
+  document.getElementById('btnPollDelete').onclick=()=>{if(confirm('Delete this poll?'))send('pollDelete')}
+  document.getElementById('btnVoteGo').onclick=()=>send('pollVote',{vote:'go'})
+  document.getElementById('btnVoteNogo').onclick=()=>send('pollVote',{vote:'nogo'})
+  document.getElementById('btnReqHoldBooster').onclick=()=>send('requestHold',{scope:'booster',note:prompt('Note (optional)')||''})
+  document.getElementById('btnReqAbortBooster').onclick=()=>send('requestAbort',{scope:'booster',note:prompt('Note (optional)')||''})
+  document.getElementById('btnReqHoldShip').onclick=()=>send('requestHold',{scope:'starship',note:prompt('Note (optional)')||''})
+  document.getElementById('btnReqAbortShip').onclick=()=>send('requestAbort',{scope:'starship',note:prompt('Note (optional)')||''})
+  document.getElementById('btnReqHold').onclick=()=>send('requestHold',{note:prompt('Note (optional)')||''})
+  document.getElementById('btnReqScrub').onclick=()=>send('requestScrub',{note:prompt('Note (optional)')||''})
+  document.getElementById('btnChat').onclick=()=>{
+    const t=document.getElementById('inChat').value.trim();if(!t)return
+    send('chat',{text:t});document.getElementById('inChat').value=''
+  }
+  document.getElementById('inChat').onkeydown=e=>{if(e.key==='Enter')document.getElementById('btnChat').click()}
+
+
+
+  let _sigJoin = ''
+  function renderJoinRequests(list) {
+    const box = document.getElementById('joinRequestList')
+    if (!box) return
+    list = list || []
+    const sig = list.map(j => j.id + j.name).join('|')
+    if (sig === _sigJoin) return
+    _sigJoin = sig
+    if (!list.length) {
+      box.innerHTML = '<p style="color:var(--muted);font-size:13px">No pending requests</p>'
+      return
+    }
+    box.innerHTML = ''
+    list.forEach(j => {
+      const row = document.createElement('div')
+      row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 12px;margin-bottom:8px;border-radius:12px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.03)'
+      row.innerHTML = '<div style="flex:1"><div style="font-weight:800;letter-spacing:1px">' + (j.name||'?') + '</div><div style="font-size:11px;color:var(--dim);font-family:var(--mono)">' + (j.title||j.role||'') + '</div></div>'
+      if (auth && auth.role === 'ceo') {
+        const ok = document.createElement('button'); ok.className = 'primary btn-sm'; ok.textContent = 'ACCEPT'
+        ok.onclick = () => send('joinApprove', { id: j.id })
+        const no = document.createElement('button'); no.className = 'ghost btn-sm'; no.textContent = 'DENY'
+        no.style.borderColor = 'rgba(255,77,94,0.4)'; no.style.color = 'var(--red)'
+        no.onclick = () => send('joinDeny', { id: j.id })
+        row.appendChild(ok); row.appendChild(no)
+      }
+      box.appendChild(row)
+    })
+  }
+
+  // —— Timeline event editor (CEO) ——
+  function fmtTlTime(sec) {
+    const neg = sec < 0
+    let s = Math.abs(Math.round(sec))
+    const h = Math.floor(s / 3600); s %= 3600
+    const m = Math.floor(s / 60); s %= 60
+    const pad = n => String(n).padStart(2, '0')
+    const body = h > 0 ? (h + ':' + pad(m) + ':' + pad(s)) : (pad(m) + ':' + pad(s))
+    return (neg ? 'T- ' : 'T+ ') + body
+  }
+  function secToMinInput(sec) {
+    // show minutes with up to 2 decimal places
+    const m = (Number(sec) || 0) / 60
+    return (Math.round(m * 100) / 100).toString()
+  }
+  function minInputToSec(v) {
+    return Math.round((Number(v) || 0) * 60)
+  }
+  let _sigTl = ''
+  function renderTimelineList(events) {
+    const list = document.getElementById('tlEventList')
+    if (!list) return
+    events = (events || []).slice().sort((a, b) => a.t - b.t)
+    const sig = events.map(e => e.id + '|' + e.t + '|' + e.label + '|' + e.pos).join(';')
+    if (sig === _sigTl) return
+    _sigTl = sig
+    list.innerHTML = ''
+    if (!events.length) {
+      list.innerHTML = '<p style="color:var(--muted);font-size:13px">No events — add one above or reset defaults.</p>'
+      return
+    }
+    const isCeo = auth && auth.role === 'ceo'
+    events.forEach(e => {
+      const row = document.createElement('div')
+      row.className = 'tl-row'
+      const tInput = document.createElement('input')
+      tInput.type = 'number'; tInput.step = '0.01'; tInput.value = secToMinInput(e.t); tInput.title = 'Minutes relative to T-0'
+      tInput.disabled = !isCeo
+      const lab = document.createElement('input')
+      lab.type = 'text'; lab.value = e.label.replace(/\n/g, ' / '); lab.maxLength = 48
+      lab.disabled = !isCeo
+      const pos = document.createElement('select')
+      pos.innerHTML = '<option value="above">Above</option><option value="below">Below</option>'
+      pos.value = e.pos === 'above' ? 'above' : 'below'
+      pos.disabled = !isCeo
+      const fmt = document.createElement('span')
+      fmt.className = 'tl-fmt'; fmt.textContent = fmtTlTime(e.t)
+      const del = document.createElement('button')
+      del.className = 'tl-del'; del.textContent = '×'; del.title = 'Delete'
+      del.disabled = !isCeo
+      const save = () => {
+        if (!isCeo) return
+        send('timelineUpdate', {
+          id: e.id,
+          t: minInputToSec(tInput.value),
+          label: lab.value.replace(/\s*\/\s*/g, '\n'),
+          pos: pos.value
+        })
+      }
+      tInput.onchange = () => { fmt.textContent = fmtTlTime(minInputToSec(tInput.value)); save() }
+      lab.onchange = save
+      pos.onchange = save
+      del.onclick = () => { if (isCeo && confirm('Remove "' + e.label.replace(/\n/g, ' ') + '"?')) send('timelineDelete', { id: e.id }) }
+      row.appendChild(tInput)
+      row.appendChild(lab)
+      row.appendChild(pos)
+      row.appendChild(fmt)
+      row.appendChild(del)
+      list.appendChild(row)
+    })
+  }
+  document.getElementById('btnTlAdd') && (document.getElementById('btnTlAdd').onclick = () => {
+    if (!(auth && auth.role === 'ceo')) return
+    const label = (document.getElementById('tlNewLabel').value || '').trim()
+    if (!label) return
+    const tMin = Number(document.getElementById('tlNewT').value)
+    const pos = document.getElementById('tlNewPos').value
+    const tSec = Number.isFinite(tMin) ? Math.round(tMin * 60) : 0
+    send('timelineAdd', { event: { label: label.replace(/\s*\/\s*/g, '\n'), t: tSec, pos } })
+    document.getElementById('tlNewLabel').value = ''
+    document.getElementById('tlNewT').value = ''
+  })
+  document.getElementById('btnTlReset') && (document.getElementById('btnTlReset').onclick = () => {
+    if (!(auth && auth.role === 'ceo')) return
+    if (confirm('Reset timeline to default Starship events?')) send('timelineReset')
+  })
+
+  // —— Availability calendar ——
+  const AVAIL_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  const AVAIL_START_H = 0, AVAIL_END_H = 24, AVAIL_STEP = 30 // minutes
+  let mySlots = [] // { day, start, end } minutes
+  let availPaint = null // { day, startRow, mode: 'on'|'off' }
+
+  function minsToHHMM(m) {
+    const h = Math.floor(m / 60), mm = m % 60
+    return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0')
+  }
+  function parseHHMM(s) {
+    const p = String(s || '').split(':')
+    return (Number(p[0]) || 0) * 60 + (Number(p[1]) || 0)
+  }
+
+  function buildAvailGrid() {
+    const grid = document.getElementById('availGrid')
+    if (!grid || grid.dataset.built) return
+    grid.dataset.built = '1'
+    // header already in HTML; add rows
+    for (let h = AVAIL_START_H; h < AVAIL_END_H; h++) {
+      for (let half = 0; half < 2; half++) {
+        const mins = h * 60 + half * 30
+        const time = document.createElement('div')
+        time.className = 'avail-time'
+        time.textContent = half === 0 ? minsToHHMM(mins) : ''
+        grid.appendChild(time)
+        for (let d = 0; d < 7; d++) {
+          const cell = document.createElement('div')
+          cell.className = 'avail-cell'
+          cell.dataset.day = d
+          cell.dataset.mins = mins
+          cell.onmousedown = (ev) => {
+            ev.preventDefault()
+            const on = cell.classList.contains('on')
+            availPaint = { day: d, start: mins, mode: on ? 'off' : 'on' }
+            toggleCellRange(d, mins, mins, availPaint.mode)
+          }
+          cell.onmouseenter = () => {
+            if (!availPaint || availPaint.day !== d) return
+            const a = Math.min(availPaint.start, mins)
+            const b = Math.max(availPaint.start, mins)
+            // preview: clear paint class then set range
+            grid.querySelectorAll('.avail-cell.paint').forEach(c => c.classList.remove('paint'))
+            for (let m = a; m <= b; m += AVAIL_STEP) {
+              const c = grid.querySelector('.avail-cell[data-day="' + d + '"][data-mins="' + m + '"]')
+              if (c) c.classList.add('paint')
+            }
+          }
+          grid.appendChild(cell)
+        }
+      }
+    }
+    document.addEventListener('mouseup', () => {
+      if (!availPaint) return
+      const grid = document.getElementById('availGrid')
+      const painted = [...grid.querySelectorAll('.avail-cell.paint')]
+      if (painted.length) {
+        const minsList = painted.map(c => Number(c.dataset.mins)).sort((a, b) => a - b)
+        const day = Number(painted[0].dataset.day)
+        const start = minsList[0]
+        const end = minsList[minsList.length - 1] + AVAIL_STEP
+        if (availPaint.mode === 'on') {
+          mySlots.push({ day, start, end })
+          mySlots = mergeSlots(mySlots)
+        } else {
+          mySlots = subtractSlot(mySlots, day, start, end)
+        }
+        painted.forEach(c => c.classList.remove('paint'))
+        paintSlotsOnGrid()
+        renderMySlotChips()
+      }
+      availPaint = null
+    })
+  }
+
+  function mergeSlots(slots) {
+    const byDay = {}
+    slots.forEach(s => {
+      byDay[s.day] = byDay[s.day] || []
+      byDay[s.day].push({ start: s.start, end: s.end })
+    })
+    const out = []
+    Object.keys(byDay).forEach(d => {
+      const arr = byDay[d].sort((a, b) => a.start - b.start)
+      let cur = null
+      arr.forEach(s => {
+        if (!cur) cur = { ...s }
+        else if (s.start <= cur.end) cur.end = Math.max(cur.end, s.end)
+        else { out.push({ day: Number(d), ...cur }); cur = { ...s } }
+      })
+      if (cur) out.push({ day: Number(d), ...cur })
+    })
+    return out
+  }
+  function subtractSlot(slots, day, start, end) {
+    const out = []
+    slots.forEach(s => {
+      if (s.day !== day || s.end <= start || s.start >= end) { out.push(s); return }
+      if (s.start < start) out.push({ day, start: s.start, end: start })
+      if (s.end > end) out.push({ day, start: end, end: s.end })
+    })
+    return out
+  }
+  function toggleCellRange(day, start, end, mode) {
+    const grid = document.getElementById('availGrid')
+    for (let m = start; m <= end; m += AVAIL_STEP) {
+      const c = grid.querySelector('.avail-cell[data-day="' + day + '"][data-mins="' + m + '"]')
+      if (c) c.classList.toggle('paint', true)
+    }
+  }
+  function paintSlotsOnGrid() {
+    const grid = document.getElementById('availGrid')
+    if (!grid) return
+    grid.querySelectorAll('.avail-cell').forEach(c => {
+      c.classList.remove('on')
+      const lab = c.querySelector('.avail-slot-label')
+      if (lab) lab.remove()
+    })
+    mySlots.forEach(s => {
+      for (let m = s.start; m < s.end; m += AVAIL_STEP) {
+        const c = grid.querySelector('.avail-cell[data-day="' + s.day + '"][data-mins="' + m + '"]')
+        if (c) {
+          c.classList.add('on')
+          if (m === s.start) {
+            const lab = document.createElement('div')
+            lab.className = 'avail-slot-label'
+            lab.textContent = minsToHHMM(s.start) + '–' + minsToHHMM(s.end)
+            c.appendChild(lab)
+          }
+        }
+      }
+    })
+  }
+  function renderMySlotChips() {
+    const box = document.getElementById('availMySlots')
+    if (!box) return
+    box.innerHTML = ''
+    mySlots.slice().sort((a, b) => a.day - b.day || a.start - b.start).forEach((s, i) => {
+      const chip = document.createElement('div')
+      chip.className = 'avail-chip'
+      chip.innerHTML = '<span>' + AVAIL_DAYS[s.day] + ' ' + minsToHHMM(s.start) + '–' + minsToHHMM(s.end) + '</span>'
+      const x = document.createElement('button')
+      x.textContent = '×'
+      x.onclick = () => { mySlots.splice(mySlots.indexOf(s), 1); paintSlotsOnGrid(); renderMySlotChips() }
+      chip.appendChild(x)
+      box.appendChild(chip)
+    })
+  }
+  function loadMyAvailabilityFromState() {
+    if (!auth || !state || !state.availability) return
+    const key = (auth.name + '|' + auth.role).toLowerCase()
+    const mine = state.availability[key]
+    if (mine && Array.isArray(mine.slots)) {
+      mySlots = mine.slots.map(s => ({ day: s.day, start: s.start, end: s.end }))
+      if (mine.tz && document.getElementById('availTz')) document.getElementById('availTz').value = mine.tz
+    }
+    paintSlotsOnGrid()
+    renderMySlotChips()
+  }
+  function renderTeamAvailability() {
+    const box = document.getElementById('availTeamList')
+    if (!box || !state) return
+    const av = state.availability || {}
+    const keys = Object.keys(av).sort()
+    if (!keys.length) {
+      box.innerHTML = '<p style="color:var(--muted);font-size:13px">No one has set availability yet.</p>'
+      return
+    }
+    box.innerHTML = ''
+    keys.forEach(k => {
+      const p = av[k]
+      const div = document.createElement('div')
+      div.className = 'avail-person'
+      const slots = (p.slots || []).slice().sort((a, b) => a.day - b.day || a.start - b.start)
+        .map(s => AVAIL_DAYS[s.day] + ' ' + minsToHHMM(s.start) + '–' + minsToHHMM(s.end)).join(' · ')
+      div.innerHTML = '<div class="ap-name">' + (p.name || k) + ' <span style="color:var(--dim);font-weight:600;font-size:12px">' + (p.title || '') + (p.tz ? ' · ' + p.tz : '') + '</span></div>' +
+        '<div class="ap-slots">' + (slots || '— no slots') + '</div>'
+      box.appendChild(div)
+    })
+  }
+
+  // Populate timezone select
+  ;(function initTz() {
+    const sel = document.getElementById('availTz')
+    if (!sel) return
+    const tzs = typeof Intl !== 'undefined' && Intl.supportedValuesOf
+      ? Intl.supportedValuesOf('timeZone')
+      : ['UTC', 'Europe/Rome', 'Europe/London', 'America/New_York', 'America/Los_Angeles', 'Asia/Tokyo']
+    const prefer = (typeof Intl !== 'undefined' && Intl.DateTimeFormat().resolvedOptions().timeZone) || 'UTC'
+    tzs.forEach(z => {
+      const o = document.createElement('option')
+      o.value = z; o.textContent = z
+      if (z === prefer) o.selected = true
+      sel.appendChild(o)
+    })
+  })()
+
+  document.getElementById('btnAvailSave') && (document.getElementById('btnAvailSave').onclick = () => {
+    if (!auth) return
+    const tz = document.getElementById('availTz') ? document.getElementById('availTz').value : 'UTC'
+    send('setAvailability', { slots: mySlots, tz })
+  })
+  document.getElementById('btnAvailClear') && (document.getElementById('btnAvailClear').onclick = () => {
+    mySlots = []; paintSlotsOnGrid(); renderMySlotChips()
+  })
+  document.getElementById('btnAvailManualToggle') && (document.getElementById('btnAvailManualToggle').onclick = () => {
+    const box = document.getElementById('availManualBox')
+    if (!box) return
+    box.classList.toggle('hidden')
+    document.getElementById('btnAvailManualToggle').textContent =
+      box.classList.contains('hidden') ? '▸ Add a slot manually' : '▾ Add a slot manually'
+  })
+  document.getElementById('btnAvailManAdd') && (document.getElementById('btnAvailManAdd').onclick = () => {
+    const day = Number(document.getElementById('availManDay').value)
+    const start = parseHHMM(document.getElementById('availManStart').value)
+    const end = parseHHMM(document.getElementById('availManEnd').value)
+    if (end <= start) return alert('End must be after start')
+    mySlots.push({ day, start, end })
+    mySlots = mergeSlots(mySlots)
+    paintSlotsOnGrid()
+    renderMySlotChips()
+  })
+
+  // Build grid when availability tab is opened
+  document.querySelectorAll('#nav button').forEach(btn => {
+    const prev = btn.onclick
+    btn.addEventListener('click', () => {
+      if (btn.dataset.sec === 'availability') {
+        buildAvailGrid()
+        loadMyAvailabilityFromState()
+        renderTeamAvailability()
+      }
+    })
+  })
+
+
+
+  // —— Flight plan ——
+  let fpLocal = { booster: 'catch', ship: 'catch' }
+  let fpAnim = null // { start, duration, raf }
+
+  function updateFlightPlanUI(fp) {
+    fp = fp || fpLocal
+    fpLocal.booster = fp.booster || 'catch'
+    fpLocal.ship = fp.ship || 'catch'
+    document.querySelectorAll('#fpBoosterModes button').forEach(b => {
+      b.classList.toggle('active', b.dataset.b === fpLocal.booster)
+    })
+    document.querySelectorAll('#fpShipModes button').forEach(b => {
+      b.classList.toggle('active', b.dataset.s === fpLocal.ship)
+    })
+    const lab = document.getElementById('fpLabel')
+    if (lab) lab.textContent = fp.label || flightPlanLabel(fpLocal)
+  }
+  function flightPlanLabel(fp) {
+    const m = {
+      'catch|catch': 'Double catch',
+      'catch|splashdown': 'Booster catch · Ship splashdown',
+      'splashdown|catch': 'Booster splashdown · Ship catch',
+      'splashdown|splashdown': 'Double splashdown'
+    }
+    return m[(fp.booster||'catch') + '|' + (fp.ship||'catch')] || 'Custom'
+  }
+  document.querySelectorAll('#fpBoosterModes button').forEach(btn => {
+    btn.onclick = () => {
+      if (!(auth && auth.role === 'ceo')) return
+      fpLocal.booster = btn.dataset.b
+      send('setFlightPlan', { booster: fpLocal.booster, ship: fpLocal.ship })
+    }
+  })
+  document.querySelectorAll('#fpShipModes button').forEach(btn => {
+    btn.onclick = () => {
+      if (!(auth && auth.role === 'ceo')) return
+      fpLocal.ship = btn.dataset.s
+      send('setFlightPlan', { booster: fpLocal.booster, ship: fpLocal.ship })
+    }
+  })
+
+  // Flight plan animation moved to dedicated overlay: /flight-plan (like propellant)
+  // Mode buttons above still control recovery profile via setFlightPlan.
+  document.querySelectorAll('#nav button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.sec === 'flightplan') {
+        setTimeout(() => updateFlightPlanUI(state && state.flightPlan), 50)
+      }
+    })
+  })
+
+
+  if(auth&&auth.token) showApp()
+})()
+</script>
+</body>
+</html>

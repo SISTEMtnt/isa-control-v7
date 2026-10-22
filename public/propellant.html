@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Propellant Load</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700&display=swap");
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{margin:0;height:100%}
+body{font-family:"Barlow","D-DIN","Helvetica Neue",Arial,sans-serif;color:#fff;-webkit-font-smoothing:antialiased;background:transparent;overflow:hidden;}
+.panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(var(--s,1.6));width:158px;height:451px;background:rgba(32,35,36,.92);border-radius:6px}
+svg{position:absolute;inset:0}
+.m{position:absolute;left:93px}
+.m small{display:block;font-size:7px;line-height:9px;margin-bottom:3px;font-weight:600;letter-spacing:.07em;color:#d3d6d8}
+.m b{display:block;font-size:17px;line-height:18px;font-weight:700;letter-spacing:.06em;white-space:nowrap}
+.m sup{font-size:6px;font-weight:700;margin-left:1px;vertical-align:top;position:relative;top:2px;line-height:1}
+</style></head><body>
+<div class="panel">
+<svg width="158" height="451" viewBox="0 0 158 451" fill="none" stroke="#efece4" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round">
+<defs>
+ <linearGradient id="gs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8c9090"/><stop offset="1" stop-color="#a2a5a5"/></linearGradient>
+ <linearGradient id="gl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9b9e9e"/><stop offset="1" stop-color="#abadad"/></linearGradient>
+ <clipPath id="cSC"><path d="M37.7 95 Q37.7 83 52 83 Q66.3 83 66.3 95 L66.3 124 Q66.3 128 60 130.5 L52 135.3 L44 130.5 Q37.7 128 37.7 124Z"/></clipPath>
+ <clipPath id="cSL"><path d="M36.5 128 L67.5 128 L67.5 176 Q67.5 188 56 188 L48 188 Q36.5 188 36.5 176Z"/></clipPath>
+ <clipPath id="cBC"><path d="M37.7 207 Q37.7 199 52 199 Q66.3 199 66.3 207 L66.3 280 Q66.3 285 56.5 290 L47.5 290 Q37.7 285 37.7 280Z"/></clipPath>
+ <clipPath id="cBL"><rect x="37.7" y="290" width="28.6" height="132"/></clipPath>
+</defs>
+<g transform="translate(-1.2 0)">
+<!-- tank fills -->
+<g stroke="none">
+ <g clip-path="url(#cSL)"><rect id="fSL" x="30" y="188" width="50" height="0" fill="url(#gl)"/></g>
+ <g clip-path="url(#cSC)"><rect id="fSC" x="30" y="135" width="50" height="0" fill="url(#gs)"/></g>
+ <g clip-path="url(#cBC)"><rect id="fBC" x="30" y="290" width="50" height="0" fill="url(#gs)"/></g>
+ <g clip-path="url(#cBL)"><rect id="fBL" x="30" y="422" width="50" height="0" fill="url(#gl)"/><rect x="47.5" y="290" width="9" height="132" fill="rgba(0,0,0,.14)"/></g>
+ <circle cx="52" cy="33.8" r="4.8" fill="#9b9e9e"/><circle cx="52" cy="46.4" r="5.8" fill="#8f9393"/>
+ <path d="M37.7 282 L47.5 290 L37.7 290Z M66.3 282 L56.5 290 L66.3 290Z" fill="#111313"/>
+</g>
+<!-- ship outline -->
+<path d="M52 24.5 Q57 26 58.5 33 L59.3 35.3 L76 51.2 L76.8 55.7 L66.8 57.5 L68 62 L68 150 L79 170 L79.7 193.7 L24.3 193.7 L25 170 L36 150 L36 62 L37.2 57.5 L27.2 55.7 L28 51.2 L44.7 35.3 L45.5 33 Q47 26 52 24.5Z"/>
+<path d="M44 40 Q42 56 38.5 76 M60 40 Q62 56 65.5 76" stroke-width=".5" opacity=".4"/>
+<circle cx="52" cy="46.4" r="5.8" stroke-width=".7"/>
+<rect x="50.6" y="52" width="2.8" height="31" fill="#9b9e9e" stroke-width=".9"/>
+<!-- ship tanks -->
+<path d="M36.5 126 L36.5 176 Q36.5 188 48 188 L56 188 Q67.5 188 67.5 176 L67.5 126" stroke-width=".9"/>
+<path d="M37.7 95 Q37.7 83 52 83 Q66.3 83 66.3 95 L66.3 124 Q66.3 128 60 130.5 L52 135.3 L44 130.5 Q37.7 128 37.7 124Z" stroke-width=".9"/>
+<path d="M51 136 L51 186 M53 136 L53 186" stroke-width=".7"/>
+<path d="M46 138 C42 152 49 166 44.5 184 M58 138 C62 152 55 166 59.5 184" stroke-width=".5" opacity=".7"/>
+<path d="M41 188 L41 193 M46 188 L46 193 M52 188 L52 194 M58 188 L58 193 M63 188 L63 193" stroke-width=".6" opacity=".6"/>
+<!-- booster outline -->
+<path d="M36 424 L36 205 Q36 197.5 52 197.5 Q68 197.5 68 205 L68 424"/>
+<path d="M37.7 207 Q37.7 199 52 199 Q66.3 199 66.3 207 L66.3 280 Q66.3 285 56.5 290 L47.5 290 Q37.7 285 37.7 280Z" stroke-width=".9"/>
+<!-- grid fins -->
+<rect x="24.7" y="214.3" width="11.5" height="2.2" rx="1" stroke-width=".8"/>
+<rect x="67.8" y="214.3" width="11" height="2.2" rx="1" stroke-width=".8"/>
+<rect x="46.3" y="213.7" width="11" height="3.4" rx="1.6" stroke-width=".7"/>
+<!-- lower section -->
+<path d="M37.7 290 L37.7 420 M66.3 290 L66.3 420 M47.5 290 L47.5 408 M56.5 290 L56.5 408" stroke-width=".8"/>
+<path d="M35.4 342 L37 335 L40.5 335 L40.5 417 L35.4 417Z M68.6 342 L67 335 L63.5 335 L63.5 417 L68.6 417Z" stroke-width=".8"/>
+<path d="M38.8 394 L38.8 383 L41.9 377 L45 383 L45 394 L45 411 Q41.9 417 38.8 411Z" fill="#9a9d9d" stroke-width=".7"/>
+<path d="M39.4 383 L41.9 378.5 L44.4 383 L44.4 386 L39.4 386Z" fill="#0e1010" stroke="none"/>
+<path d="M52 384 Q51 392 50.6 399 Q48 405 48.4 412 Q49 421 52 421 Q55 421 55.6 412 Q56 405 53.4 399 Q53 392 52 384Z" fill="#98a0a0" stroke-width=".7"/>
+<circle cx="52" cy="384" r="1" fill="#0e1010" stroke="none"/>
+<!-- engines -->
+<path d="M37.7 418 L37.7 424 L66.3 424 L66.3 418" stroke-width=".7" opacity=".8"/>
+<g fill="#141616" stroke-width=".6"><path d="M37.5 424 L41.5 424 L42 432 L37 432Z"/><path d="M43 424 L47 424 L47.4 433 L42.6 433Z"/><path d="M48.5 424 L52.5 424 L52.9 433.5 L48.1 433.5Z"/><path d="M54 424 L58 424 L58.4 433 L53.6 433Z"/><path d="M59.5 424 L63.5 424 L64 432 L59 432Z"/></g>
+<path d="M38 435 L66 435" stroke-width=".7" opacity=".7"/>
+</g>
+</svg>
+<div class="m" style="top:73px"><small>CH4</small><b id="a">98.2<sup>%</sup></b></div>
+<div class="m" style="top:131px"><small>LOX</small><b id="b">98.9<sup>%</sup></b></div>
+<div class="m" style="top:289px"><small>CH4</small><b id="c">95.9<sup>%</sup></b></div>
+<div class="m" style="top:348px"><small>LOX</small><b id="d">96.0<sup>%</sup></b></div>
+</div>
+<script>
+(function(){
+  // 0% at T-30:00 -> 100% at T-3:00 (linear)
+  const START=30*60*1000, END=3*60*1000
+  const q=new URLSearchParams(location.search).get('scale'); if(q) document.querySelector('.panel').style.setProperty('--s',q)
+  const clamp=v=>Math.max(0,Math.min(1,v))
+  function progress(r){ if(r==null||r>=START) return 0; if(r<=END) return 1; return (START-r)/(START-END) }
+  function fill(id,top,bot,p){const e=document.getElementById(id),h=(bot-top)*p;e.setAttribute('y',bot-h);e.setAttribute('height',h)}
+  function draw(L){
+    // L = {a:ship CH4, b:ship LOX, c:booster CH4, d:booster LOX} each 0..1
+    for(const k in L) document.getElementById(k).innerHTML=(L[k]*100).toFixed(1)+'<sup>%</sup>'
+    fill('fSC',83,135.3,L.a); fill('fSL',128,188,L.b)
+    fill('fBC',199,290,L.c);  fill('fBL',290,422,L.d)
+  }
+  function levels(p){ return {a:Math.pow(p,0.97),b:p,c:Math.pow(p,1.03),d:Math.pow(p,1.06)} }
+  let state=null, skew=0, skewReady=false
+  const elapsed=t=>t.running? t.elapsedMs+(Date.now()-skew-t.startTimestamp) : t.elapsedMs
+  function render(){
+    let remain=null
+    if(state&&state.timer.mode==='down') remain=state.timer.totalMs-elapsed(state.timer)
+    draw(levels(clamp(progress(remain))))
+  }
+  draw(levels(0))
+  requestAnimationFrame(function tick(){render();requestAnimationFrame(tick)})
+  function connect(){
+    const ws=new WebSocket((location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+'/')
+    ws.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==='state'){state=m;if(m.serverNow){const sm=Date.now()-m.serverNow;if(!skewReady){skew=sm;skewReady=true}else if(sm<skew)skew=sm}}}catch{}}
+    ws.onclose=()=>setTimeout(connect,1200)
+    ws.onerror=()=>ws.close()
+  }
+  connect()
+})()
+</script></body></html>

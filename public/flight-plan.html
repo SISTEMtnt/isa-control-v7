@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Flight Plan</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap");
+html,body{margin:0;height:100%;background:#000;overflow:hidden}
+body.transparent{background:transparent}
+body{font-family:"Barlow","D-DIN","Helvetica Neue",Arial,sans-serif;color:#fff;-webkit-font-smoothing:antialiased}
+svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.lab{font-weight:700;font-size:21px;letter-spacing:.03em;fill:#fff}
+.sub{font-weight:500;font-size:19px;letter-spacing:.05em;fill:#c4c7c8}
+.lead{fill:none;stroke:#d6d8d8;stroke-width:1.3;stroke-dasharray:4 4}
+.L{transition:opacity .6s ease;opacity:.32}
+.L.on{opacity:1}
+.hull{fill:#050606;stroke:#f2f2f0;stroke-width:1.1;stroke-linejoin:round}
+.fin{fill:#0b0c0c;stroke:#f2f2f0;stroke-width:1;stroke-linejoin:round}
+.thin{fill:none;stroke:#f2f2f0;stroke-width:.6;opacity:.65}
+.eng{fill:#d9dadb;stroke:#f2f2f0;stroke-width:.4}
+.plan{fill:none;stroke:#fff;stroke-width:1.2;opacity:.2}
+.planB{fill:none;stroke:#fff;stroke-width:1.2;opacity:.2;stroke-dasharray:7 6}
+.fly{fill:none;stroke:#fff;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.flyB{fill:none;stroke:#fff;stroke-width:1.5;stroke-dasharray:7 6;stroke-linecap:round}
+.site{fill:none;stroke:#f2f2f0;stroke-width:1;stroke-dasharray:2 5;opacity:.7}
+.wave{fill:none;stroke:#f2f2f0;stroke-width:1;opacity:.55}
+.tw{fill:none;stroke:#f2f2f0;stroke-width:1.1}
+.twt{fill:none;stroke:#f2f2f0;stroke-width:.6;opacity:.55}
+.hud1{font-weight:700;font-size:30px;letter-spacing:.08em;fill:#fff}
+.hud2{font-weight:600;font-size:22px;letter-spacing:.1em;fill:#d6d8d8}
+.hud3{font-weight:500;font-size:15px;letter-spacing:.12em;fill:#7d8283}
+</style></head><body>
+<svg id="svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+<defs>
+ <radialGradient id="glow"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+</defs>
+<g id="sites"></g>
+<g id="paths"></g>
+<g id="labels"></g>
+<g id="tower"></g>
+<g id="plasma"></g>
+<g id="booster"></g>
+<g id="ship"></g>
+<g id="fx"></g>
+<text class="hud1" x="56" y="78">STARSHIP FLIGHT PLAN</text>
+<text class="hud2" id="hClock" x="56" y="116">T- 00:00:00</text>
+<text class="hud3" id="hPlan" x="56" y="144"></text>
+<text class="hud3" x="1864" y="1056" text-anchor="end">SCHEMATIC &#183; NOT TO SCALE</text>
+<text class="hud2" id="hWarn" x="960" y="540" text-anchor="middle" style="display:none">FLIGHT PLAN DISPLAY IS STARSHIP-ONLY</text>
+</svg>
+<script>
+(function(){
+const NS='http://www.w3.org/2000/svg', G=960, K=1.15, PX=230
+const q=new URLSearchParams(location.search)
+const demo=q.has('demo'), fixedT=q.has('t')?Number(q.get('t')):null, SPEED=Number(q.get('speed'))||60
+if(q.get('bg')==='transparent') document.body.classList.add('transparent')
+const $=id=>document.getElementById(id)
+let plan={booster:'catch',ship:'catch'}
+let program='starship'
+
+/* ---------- helpers ---------- */
+function el(tag,attrs,parent,html){const e=document.createElementNS(NS,tag);for(const k in attrs||{})e.setAttribute(k,attrs[k]);if(html)e.innerHTML=html;if(parent)parent.appendChild(e);return e}
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v))
+const lerp=(a,b,u)=>a+(b-a)*clamp(u,0,1)
+const seg=(t,a,b)=>clamp((t-a)/(b-a),0,1)
+const sm=u=>u*u*(3-2*u)
+function cr(p0,p1,p2,p3,u){const u2=u*u,u3=u2*u;return [0,1].map(i=>.5*((2*p1[i])+(-p0[i]+p2[i])*u+(2*p0[i]-5*p1[i]+4*p2[i]-p3[i])*u2+(-p0[i]+3*p1[i]-3*p2[i]+p3[i])*u3))}
+function makePath(kf){
+  const n=kf.length
+  const P=j=>{const k=kf[clamp(j,0,n-1)];return [k[1],k[2]]}
+  const path={kf,
+    at(t){
+      if(t<=kf[0][0]) return P(0)
+      if(t>=kf[n-1][0]) return P(n-1)
+      let i=0; while(kf[i+1][0]<t) i++
+      const u=(t-kf[i][0])/(kf[i+1][0]-kf[i][0])
+      return cr(P(i-1),P(i),P(i+1),P(i+2),u)
+    },
+    head(t){ // degrees clockwise from "up"
+      const end=kf[n-1][0], a=path.at(Math.min(t,end-1)-.5), b=path.at(Math.min(t,end-1)+.5)
+      return Math.atan2(b[0]-a[0],-(b[1]-a[1]))*180/Math.PI
+    },
+    samples(){const out=[];for(let i=0;i<n-1;i++){for(let s=0;s<24;s++){const t=kf[i][0]+(kf[i+1][0]-kf[i][0])*s/24;out.push([t,...path.at(t)])}}out.push([kf[n-1][0],...P(n-1)]);return out}
+  }
+  return path
+}
+
+/* ---------- planned trajectories ---------- */
+let shipPath, boosterPath, shipEndT=6030, boosterEndT=421
+function buildPaths(){
+  const sc=plan.ship==='catch', bc=plan.booster==='catch'
+  const sEnd=sc?G-180:G-32, yFlip=sEnd-55
+  shipPath=makePath([
+    [0,PX,G-99*K],[12,PX,G-99*K-16],[40,236,770],[58,248,705],[100,320,585],[142,440,470],
+    [220,620,360],[300,800,282],[400,990,222],[491,1150,190],[1000,1290,160],[1500,1400,134],
+    [1700,1440,126],[1760,1485,122],[2058,1570,120],[3000,1645,120],[4218,1710,122],[4229,1718,122],
+    [4800,1754,172],[5332,1790,300],[5700,1806,500],[5900,1812,yFlip-150],[6013,1815,yFlip],[6030,1815,sEnd]
+  ])
+  // booster leaves from the hot-staging point, directly behind the ship
+  const sp=shipPath.at(142), h=shipPath.head(142)*Math.PI/180
+  const bs=[sp[0]-Math.sin(h)*60*K, sp[1]+Math.cos(h)*60*K]
+  const bEnd=bc?G-170:G-45
+  boosterPath=makePath(bc?[
+    [142,bs[0],bs[1]],[160,bs[0]+2,bs[1]-40],[187,bs[0]-30,bs[1]-78],[260,300,424],[330,240,490],
+    [395,222,bEnd-175],[421,PX,bEnd]
+  ]:[
+    [142,bs[0],bs[1]],[160,bs[0]+20,bs[1]-36],[187,bs[0]+50,bs[1]-30],[280,600,445],[350,690,540],
+    [395,745,bEnd-175],[421,760,bEnd]
+  ])
+}
+
+/* ---------- attitude / burn schedules ---------- */
+function shipAngle(t){
+  if(t<2050) return shipPath.head(t)
+  if(t<2150) return lerp(shipPath.head(2050),0,sm(seg(t,1990,2100)))
+  if(t<4150) return lerp(0,90,sm(seg(t,2150,2250)))
+  if(t<4235) return lerp(90,-90,sm(seg(t,4150,4205)))
+  if(t<5332) return lerp(-90,-70,sm(seg(t,4235,4320)))
+  if(t<6005) return -70
+  return lerp(-70,0,sm(seg(t,6005,6013)))
+}
+function boosterAngle(t){
+  const h=shipPath.head(142)
+  if(t<142) return shipPath.head(t)
+  if(t<165) return lerp(h,-78,sm(seg(t,147,165)))
+  if(t<215) return lerp(-78,-8,sm(seg(t,187,215)))
+  return lerp(-8,0,seg(t,395,421))
+}
+const boostBurn=t=>(t>=-3&&t<140)||(t>=147&&t<(plan.booster==='catch'?187:172))||(t>=395&&t<421)
+const shipBurn=t=>(t>=-0.5&&t<491&&t>=0)||(t>=1700&&t<1760)||(t>=4218&&t<4229)||(t>=6013&&t<6030)
+const shipBurnStack=t=>t>=138&&t<491
+
+/* ---------- vehicle art (nose up, origin = centre) ---------- */
+const bells=(y,xs,w,l)=>xs.map(x=>`<path class="eng" d="M${x-w/2},${y} L${x+w/2},${y} L${x+w/2*.72},${y+l} L${x-w/2*.72},${y+l}Z"/>`).join('')
+const SHIP_ART=
+ `<path class="hull" d="M0,-28 C3.2,-25.6 5.5,-17 5.5,-8 L5.5,24 L-5.5,24 L-5.5,-8 C-5.5,-17 -3.2,-25.6 0,-28Z"/>`+
+ `<path class="thin" d="M-5.5,-8 L5.5,-8 M-5.5,3 L5.5,3 M-5.5,14 L5.5,14 M-1.6,-21 L-1.6,24"/>`+
+ `<path class="fin" d="M-5.5,-16 L-11.2,-12.5 L-11.2,-4.5 L-5.5,-7Z M5.5,-16 L11.2,-12.5 L11.2,-4.5 L5.5,-7Z"/>`+
+ `<path class="fin" d="M-5.5,11 L-14,16.5 L-14,26.5 L-5.5,22.5Z M5.5,11 L14,16.5 L14,26.5 L5.5,22.5Z"/>`+
+ `<path class="thin" d="M-1.2,-16 L-1.2,-5 L-3.6,-5 L-3.6,-16Z" opacity=".5"/>`+
+ bells(24,[-3.4,0,3.4],3,4.6)
+const BOOST_ART=
+ `<path class="hull" d="M-5.75,-31 C-5.75,-33.6 -3,-34.5 0,-34.5 C3,-34.5 5.75,-33.6 5.75,-31 L5.75,34 L-5.75,34Z"/>`+
+ `<path class="thin" d="M-5.75,-26 L5.75,-26 M-5.75,-6 L5.75,-6 M-5.75,14 L5.75,14" stroke-dasharray="2 1.5"/>`+
+ `<path class="fin" d="M-5.75,-28 L-10.6,-28 L-10.6,-25 L-5.75,-25Z M5.75,-28 L10.6,-28 L10.6,-25 L5.75,-25Z"/>`+
+ `<path class="thin" d="M0,-24 L0,34"/>`+
+ bells(34,[-4.2,-2.1,0,2.1,4.2],2,4.8)
+
+const gShip=el('g',{},$('ship')), gBoost=el('g',{},$('booster'))
+const shipBody=el('g',{},gShip,SHIP_ART), boostBody=el('g',{},gBoost,BOOST_ART)
+const shipFlame=el('g',{},gShip), boostFlame=el('g',{},gBoost)
+const plasma=el('path',{d:'M-12,-26 C-20,-14 -20,10 -12,24',fill:'none',stroke:'#fff','stroke-width':1.6,'stroke-linecap':'round',opacity:0},gShip)
+function flame(g,y,w,len,on,seed){
+  if(!on){g.innerHTML='';return}
+  const f=1+.18*Math.sin(performance.now()/55+seed)+.08*Math.sin(performance.now()/23+seed*3)
+  const L=len*f
+  g.innerHTML=
+   `<path d="M${-w},${y} L${w},${y} L${w*.35},${y+L} L${-w*.35},${y+L*.92}Z" fill="#fff" opacity=".35"/>`+
+   `<path d="M${-w*.6},${y} L${w*.6},${y} L0,${y+L*.62}Z" fill="#fff" opacity=".95"/>`+
+   `<circle cx="0" cy="${y+3}" r="${w*1.5}" fill="url(#glow)" opacity=".5"/>`
+}
+const tr=(x,y,a,k)=>`translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${a.toFixed(2)}) scale(${k})`
+
+/* ---------- static scenery (sites, tower, paths) ---------- */
+const gSites=$('sites'), gPaths=$('paths'), gTower=$('tower')
+let arms=[], pathEls={}
+function ring(cx,cy,rx,ry){el('ellipse',{class:'site',cx,cy,rx,ry},gSites);el('ellipse',{class:'site',cx,cy,rx:rx*.55,ry:ry*.55},gSites)}
+function waves(cx,cy,w){for(let i=0;i<2;i++){let d=`M${cx-w},${cy+i*9}`;for(let x=-w;x<w;x+=18)d+=` q4.5,-5 9,0 t9,0`;el('path',{class:'wave',d},gSites)}}
+function tower(x,armY,id){
+  const g=el('g',{},gTower), top=G-330, w=14
+  el('rect',{class:'tw',x:x-w/2,y:top,width:w,height:G-top},g)
+  let d=''
+  for(let y=top;y<G-26;y+=26){d+=`M${x-w/2},${y} L${x+w/2},${y+26} M${x+w/2},${y} L${x-w/2},${y+26} M${x-w/2},${y+26} L${x+w/2},${y+26}`}
+  el('path',{class:'twt',d},g)
+  el('rect',{class:'tw',x:x-w/2-10,y:G-10,width:w+20,height:10},g)
+  const arm=el('rect',{class:'tw',x:x+w/2,y:armY-2.5,width:14,height:5,fill:'#050606'},g)
+  arms.push({el:arm,x:x+w/2,id})
+}
+function buildScenery(){
+  gSites.innerHTML='';gPaths.innerHTML='';gTower.innerHTML='';arms=[]
+  // launch site
+  ring(PX,G+14,150,15); waves(PX,G+34,110)
+  tower(PX-55,760,'pad')
+  el('path',{class:'tw',d:`M${PX-35},${G} L${PX+14},${G}`},gTower)
+  // ship landing site
+  const sc=plan.ship==='catch'
+  ring(1815,G+14,150,15); waves(1815,G+34,110)
+  if(sc) tower(1758,760,'ship')
+  // booster splash site
+  if(plan.booster==='splashdown'){ring(640,G+14,110,12);waves(640,G+34,80)}
+  // planned lines
+  const sp=shipPath.samples(), bp=boosterPath.samples()
+  const pts=a=>a.map(p=>p[1].toFixed(1)+','+p[2].toFixed(1)).join(' ')
+  // ship ascent stack identical to ship path until staging
+  el('polyline',{class:'plan',points:pts(sp)},gPaths)
+  el('polyline',{class:'planB',points:pts(bp)},gPaths)
+  pathEls.ship=el('polyline',{class:'fly'},gPaths)
+  pathEls.boost=el('polyline',{class:'flyB'},gPaths)
+  pathEls.sp=sp; pathEls.bp=bp
+}
+
+/* ---------- labels ---------- */
+const gLabels=$('labels')
+let labels=[]
+function buildLabels(){
+  gLabels.innerHTML='';labels=[]
+  const bc=plan.booster==='catch', sc=plan.ship==='catch'
+  const S=t=>shipPath.at(t), B=t=>boosterPath.at(t)
+  const mid=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2]
+  const bt=bc?300:350
+  const L=[
+   {t:-3,  lines:['SUPER HEAVY','ENGINE START'], x:330,y:1006, a:'start', at:[PX,G-34]},
+   {t:0,   lines:['LAUNCH'], x:330,y:880, a:'start', at:S(0)},
+   {t:58,  lines:['MAX-Q'], x:330,y:700, a:'start', at:S(58)},
+   {t:142, lines:['HOT STAGING'], x:bc?570:400,y:bc?580:560, a:'start', at:mid(S(142),B(142))},
+   {t:156, lines:['FLIP MANEUVER'], x:90,y:410, a:'start', at:B(158)},
+   {t:176, lines:['BOOSTBACK BURN'], x:90,y:330, a:'start', at:B(178)},
+   bc?{t:bt,lines:['SUPER HEAVY DESCENT'], x:330,y:640, a:'start', at:B(bt)}
+     :{t:bt,lines:['SUPER HEAVY DESCENT'], x:470,y:640, a:'start', at:B(bt)},
+   bc?{t:395,lines:['LANDING BURN'], x:330,y:760, a:'start', at:B(398)}
+     :{t:395,lines:['LANDING BURN'], x:470,y:730, a:'start', at:B(398)},
+   bc?{t:421,lines:['BOOSTER CATCH'], x:330,y:820, a:'start', at:B(421)}
+     :{t:421,lines:['WATER LANDING'],sub:'Gulf of America', x:800,y:1014, a:'start', at:B(421)},
+   {t:300, lines:['STARSHIP ASCENT'], x:830,y:420, a:'start', at:S(300)},
+   {t:491, lines:['STARSHIP ENGINE CUTOFF'], x:800,y:120, a:'start', at:S(491)},
+   {t:1730,lines:['ORBITAL INSERTION BURN'], x:1090,y:56, a:'start', at:S(1730)},
+   {t:2058,lines:['STARLINK DEPLOY'], x:1330,y:205, a:'start', at:S(2058)},
+   {t:3100,lines:['ORBITAL COAST PHASE'], x:1450,y:290, a:'start', at:S(3100)},
+   {t:4223,lines:['DEORBIT BURN'], x:1690,y:62, a:'start', at:S(4223)},
+   {t:5332,lines:['STARSHIP ENTRY'], x:1470,y:410, a:'start', at:S(5340)},
+   {t:6013,lines:sc?['LANDING BURN','AND CATCH']:['LANDING BURN','AND SPLASHDOWN'], x:1440,y:1006, a:'start', at:S(6018)}
+  ]
+  L.forEach(d=>{
+    const g=el('g',{class:'L'},gLabels)
+    const lead=el('path',{class:'lead'},g)
+    const txt=el('text',{class:'lab',x:d.x,y:d.y,'text-anchor':d.a==='end'?'end':'start'},g)
+    d.lines.forEach((s,i)=>{const tp=el('tspan',{x:d.x,dy:i?25:0},txt);tp.textContent=s})
+    let ly=d.y+(d.lines.length-1)*25
+    if(d.sub){const st=el('text',{class:'sub',x:d.x,y:ly+25,'text-anchor':d.a==='end'?'end':'start'},g);st.textContent=d.sub;ly+=25}
+    const rec={d,g,lead,txt,ly}
+    labels.push(rec)
+  })
+  layoutLabels()
+}
+function layoutLabels(){
+  labels.forEach(r=>{
+    const bb=r.g.getBBox(), d=r.d
+    const y=r.ly+11
+    const x0=bb.x, x1=bb.x+bb.width
+    // underline + leader to nearest end
+    const cx=Math.abs(d.at[0]-x0)<Math.abs(d.at[0]-x1)?x0:x1
+    const far=cx===x0?x1:x0
+    r.lead.setAttribute('d',`M${far},${y} L${cx},${y} L${d.at[0].toFixed(1)},${d.at[1].toFixed(1)}`)
+  })
+}
+
+/* ---------- mission clock ---------- */
+let state=null, skew=0, skewReady=false
+const elapsed=t=>t.running?t.elapsedMs+(Date.now()-skew-t.startTimestamp):t.elapsedMs
+function missionT(){
+  if(fixedT!=null) return fixedT
+  if(demo){const c=(performance.now()/1000*SPEED)%(6200+30);return c-30}
+  if(!state||!state.timer) return -3600
+  const t=state.timer, e=elapsed(t)
+  return t.mode==='down'?(e-t.totalMs)/1000:e/1000
+}
+function fmt(s){
+  const sign=s<0?'-':'+', a=Math.floor(Math.abs(s))
+  const p=n=>String(n).padStart(2,'0')
+  return `T${sign} ${p(Math.floor(a/3600))}:${p(Math.floor(a%3600/60))}:${p(a%60)}`
+}
+const planLabel=()=>({'catch|catch':'DOUBLE CATCH','catch|splashdown':'BOOSTER CATCH \u00b7 SHIP SPLASHDOWN','splashdown|catch':'BOOSTER SPLASHDOWN \u00b7 SHIP CATCH','splashdown|splashdown':'DOUBLE SPLASHDOWN'})[plan.booster+'|'+plan.ship]
+
+/* ---------- render ---------- */
+let lastPlanKey=''
+function rebuild(){
+  const key=plan.booster+'|'+plan.ship
+  if(key===lastPlanKey) return
+  lastPlanKey=key
+  buildPaths(); buildScenery(); buildLabels()
+  $('hPlan').textContent=planLabel()
+}
+function render(){
+  const t=missionT()
+  $('hClock').textContent=fmt(t)
+  const tt=Math.max(0,t)
+  const sp=shipPath.at(tt)
+  const staged=tt>=142
+
+  // ship
+  const sa=shipAngle(tt)
+  gShip.setAttribute('transform',tr(sp[0],sp[1],sa,K))
+  // booster (stacked until hot staging, then on its own path)
+  let bp,ba
+  if(!staged){
+    const h=sa*Math.PI/180
+    bp=[sp[0]-Math.sin(h)*60*K, sp[1]+Math.cos(h)*60*K]; ba=sa
+  }else{ bp=boosterPath.at(tt); ba=boosterAngle(tt) }
+  gBoost.setAttribute('transform',tr(bp[0],bp[1],ba,K))
+
+  // flames
+  flame(boostFlame,34,5,40,boostBurn(t),1)
+  const shipOn=staged?shipBurn(tt)||(tt<491):shipBurnStack(tt)
+  flame(shipFlame,24,4,26,t>=0&&shipOn,7)
+
+  // entry plasma
+  const pl=seg(t,5332,5420)*(1-seg(t,5900,6005))
+  plasma.setAttribute('opacity',(pl*(.7+.3*Math.sin(performance.now()/90))).toFixed(2))
+
+  // flown trails
+  const up=(arr,end)=>{const o=arr.filter(p=>p[0]<=end).map(p=>p[1].toFixed(1)+','+p[2].toFixed(1));return o}
+  const sTrail=up(pathEls.sp,tt); if(tt>0) sTrail.push(sp[0].toFixed(1)+','+sp[1].toFixed(1))
+  pathEls.ship.setAttribute('points',sTrail.join(' '))
+  if(staged){const b=up(pathEls.bp,tt);b.push(bp[0].toFixed(1)+','+bp[1].toFixed(1));pathEls.boost.setAttribute('points',b.join(' '))}
+  else pathEls.boost.setAttribute('points','')
+
+  // tower arms close around the booster/ship at catch
+  arms.forEach(a=>{
+    let ext=14
+    if(a.id==='pad'&&plan.booster==='catch') ext=lerp(14,PX-6-a.x-6,sm(seg(t,408,424)))
+    if(a.id==='ship') ext=lerp(14,1815-6-a.x-6,sm(seg(t,6024,6032)))
+    a.el.setAttribute('width',Math.max(8,ext).toFixed(1))
+  })
+
+  // labels reveal
+  labels.forEach(r=>r.g.classList.toggle('on',t>=r.d.t))
+}
+
+/* ---------- live state ---------- */
+function applyState(m){
+  state=m
+  if(m.serverNow){const sm_=Date.now()-m.serverNow;if(!skewReady){skew=sm_;skewReady=true}else if(sm_<skew)skew=sm_}
+  const pid=(m.programMeta&&m.programMeta.id)||m.vehicleProgram||'starship'
+  program=pid
+  $('hWarn').style.display=pid==='starship'?'none':''
+  if(m.flightPlan&&(q.get('plan')==null)){
+    plan.booster=m.flightPlan.booster==='splashdown'?'splashdown':'catch'
+    plan.ship=m.flightPlan.ship==='splashdown'?'splashdown':'catch'
+  }
+}
+if(q.get('plan')){const [b,s]=q.get('plan').split(',');plan.booster=b==='splashdown'?'splashdown':'catch';plan.ship=s==='splashdown'?'splashdown':'catch'}
+function connect(){
+  const ws=new WebSocket((location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+'/')
+  ws.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==='state')applyState(m)}catch{}}
+  ws.onclose=()=>setTimeout(connect,1200)
+  ws.onerror=()=>ws.close()
+}
+rebuild()
+if(!demo&&fixedT==null) connect()
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(layoutLabels)
+requestAnimationFrame(function tick(){rebuild();render();requestAnimationFrame(tick)})
+})()
+</script></body></html>

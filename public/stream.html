@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stream</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue: #3f9dff;
+    --blue-soft: #7cc0ff;
+    --fg: #f3f6fb;
+    --dim: rgba(243,246,251,0.55);
+    --dim2: rgba(243,246,251,0.32);
+    --amber: #ffc93c;
+    --red: #ff4141;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: transparent;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--fg);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  .bar-stage {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 240px;
+    overflow: visible;
+    z-index: 5;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    transition: bottom 0.45s ease, height 0.2s ease;
+  }
+  .bar {
+    /* Native art is 1920x240 — keep design size 1:1 with the PNG so it is not stretched */
+    width: 1920px;
+    height: 240px;
+    background-color: #00000000;
+    opacity: 1;
+    transform-origin: bottom center;
+    flex-shrink: 0;
+    transition: grid-template-columns 0.9s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.6s ease;
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAB4AAAADwCAYAAADhJ3mJAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAgAElEQVR4Ae3dbZfcRHYAYIbxzPjdxgvkJJ/4/78hP2a/bkg2C0sM2IBT1zsy6rHU092jlqrqPnWOznSr9VL3KRkhXVXp4osvvnhUJoUAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIEGheI5O/jxmNQfQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAoApEAviFBgAABAgQIECBAgAABAgQIECBAgAABAgQIECBAgAABAu0L6AHcfhuKgAABAgQIECBAgAABAgQIECBAgAABAgQIECBAgAABAh8FJIAdCAQIECBAgAABAgQIECBAgAABAgQIECBAgAABAgQIEOhEwBDQnTSkMAgQIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIKAHsGOAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECnQhIAHfSkMIgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQICAIaAdAwQIECBAgAABAgQIECBAgAABAgQIECBAgAABAgQIEOhEQA/gThpSGAQIECBAgAABAgQIECBAgAABAgQIECBAgAABAgQIEJAAdgwQIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECgEwFDQHfSkMIgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQICAHsCOAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECHQiIAHcSUMKgwABAgQIECBAgAABAgQIECBAgAABAgQIECBAgAABAoaAdgwQIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECgEwE9gDtpSGEQIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIEBAAtgxQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAgU4EDAHdSUMKgwABAgQIECBAgAABAgQIECBAgAABAgQIECBAgAABAnoAOwYIECBAgAABAgQIECBAgAABAgQIECBAgAABAgQIECDQiYAEcCcNKQwCBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECBAgYAtoxQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAgU4E9ADupCGFQYAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQlgxwABAgQIECBAgAABAgQIECBAgAABAgQIECBAgAABAgQ6ETAEdCcNKQwCBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECBAhEAjgmhQABAgQIECBAgAABAgQIECBAgAABAgQIECBAgAABAgQaF/iy8fqrPgECBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECBAjcCkgAOxQIECBAgAABAgQIECBAgAABAgQIECBAgAABAgQIECDQiYAEcCcNKQwCBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECBAjE+38vMBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIBA+wJ6ALffhiIgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIDARwEJYAcCAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIEOhGQAO6kIYVBgAABAgQIECBAgAABAgQIECBAgAABAgQIECBAgAABCWDHAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECBDoRkADupCGFQYAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQlgxwABAgQIECBAgAABAgQIECBAgAABAgQIECBAgAABAgQ6EZAA7qQhhUGAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAAEJYMcAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIEOhF4VOK46CQWYRAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQCC1gB7AqZtf8AQIECBAgAABAgQIECBAgAABAgQIECBAgAABAgQI9CQgAdxTa4qFAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAIHUAhLAqZtf8AQIECBAgAABAgQIECBAgAABAgQIECBAgAABAgQI9CQgAdxTa4qFAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAIHUAhLAqZtf8AQIECBAgAABAgQIECBAgAABAgQIECBAgAABAgQI9CQgAdxTa4qFAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAIHUAhLAqZtf8AQIECBAgAABAgQIECBAgAABAgQIECBAgAAB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QAwrpRAgQIAAAQIECBAgQIAAAQLbC8Q1uuTv9u2gBgQIECBQsYAEcMWNo2oECBAgUI1ADAUdPYEVAgQIECBAgAABAgQIECBAYDuBx2XXhn7ezt+eCRAgQKARAUNAN9JQqkmAAAECmwtEAvhdmQwFvXlTqAABAgQIECBAgAABAgQIJBQw9HPCRhcyAQIECJwmoAfwaW7WIkCAAIGcAoaZytnuoiZAgAABAgQIECBAgACB7QVck2/fBmpAgAABAo0ISAA30lCqSYAAAQJVCMTIGU+qqIlKECBAgAABAgQIECBAgACBPAI3JdTrPOGKlAABAgQIPEzAENAP87M2AQIECOQTiKGgfy3T7/lCFzEBAgQIECBAgAABAgQIEFhd4KLsUe/f1dntkAABAgRaFpAAbrn11J0AAQIEthCIC88XZfphi53bJwECBAgQIECAAAECBAgQSCYQyd/LZDELlwABAgQIPEjAENAP4rMyAQIECCQViGGnYvgphQABAgQIECBAgAABAgQIEDifwFXZtFcxnc/XlgkQIECgUwEJ4E4bVlgECBAgcHaBeALZefTszHZAgAABAgQIECBAgAABAkkFhhG4koYvbAIECBAgcLqAIaBPt7MmAQIECOQWiOGnnpXpn7kZRE+AAAECBAgQIECAAAECBM4iED1/4/61QoAAAQIECBwpoOfSkWAWJ0CAAAECIwEXoyMMHwkQIECAAAECBAgQIECAwEICcd86HrpWCBAgQIAAgRMEJIBPQLMKAQIECBAYCbwYffaRAAECBAgQIECAAAECBAgQeLhAvHYphoBWCBAgQIAAgRMEDAF9AppVCBAgQIDASOC6fL4p06+jeT4SIECAAAECBAgQIECAAAECpwnEPesYcUshQIAAAQIEThTQA/hEOKsRIECAAIGRQPQC9mTyCMRHAgQIECBAgAABAgQIECBwosDLE9ezGgECBAgQIHAroAewQ4EAAQIECDxcIM6nT8v09uGbsgUCBAgQIECAAAECBAgQIJBWIEbYipG2FAIECBAgQOABAnoAPwDPqgQIECBAYCQQvYCdV0cgPhIgQIAAAQIECBAgQIAAgSMEYmQtvX+PALMoAQIECBCYE9ADeE7GfAIECBAgcLzA87LKj8evZg0CBAgQIECAAAECBAgQIJBeIEbWukyvAIAAAQIECCwgoKfSAog2QYAAAQIE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npjWCzhp4wubAAECBAgQIECAAAECDQo8LnW+brDeqkyAAAECBLoV8A7gbptWYAQIECDQsEA8Of1Tw/VXdQIECBAgQIAAAQIECBDII/CyhGokqzztLVICBAgQaEBAD+AGGkkVCRAgQCCdQDw5He9PUggQIECAAAECBAgQIECAQM0Ccf1qFKuaW0jdCBAgQCClgARwymYXNAECBGLovBcAABFkSURBVAg0IPCigTqqIgECBAgQIECAAAECBAjkFnDtmrv9RU+AAAEClQoYArrShlEtAgQIEEgvEE9Qx5PU79JLACBAgAABAgQIECBAgACBGgUuS6UiAWz45xpbR50IECBAILVAJIAVAgQIECBAoE6B16Va39dZNbUiQIAAAQIECBAgQIAAgeQCr0r8RphMfhAInwABAgTqFHCCrrNd1IoAAQIECITA8zLFE9UKAQIECBAgQIAAAQIECBCoSSB6/Rr+uaYWURcCBAgQIDASMAT0CMNHAgQIECBQoUD0Av6fCuulSgQIECBAgAABAgQIECCQV+BlCd3oknnbX+QECBAgULmAHsCVN5DqESBAgEB6gegF7H1K6Q8DAAQIECBAgAABAgQIEKhKIK5VFQIECBAgQKBSAQngShtGtQgQIECAwK1ADAEdT1YrBAgQIECAAAECBAgQIECgBoFnpRI3NVREHQgQIECAAIFpAQngaRdzCRAgQIBATQKvaqqMuhAgQIAAAQIECBAgQIBAagEPKadufsETIECAQAsCEsAttJI6EiBAgEB2gXivUjxhrRAgQIAAAQIECBAgQIAAgS0FrsvOn2xZAfsmQIAAAQIE7heQAL7fyBIECBAgQKAGga9qqIQ6ECBAgAABAgQIECBAgEBqAdemqZtf8AQIECDQioAEcCstpZ4ECBAgkF0gnrKOSSFAgAABAgQIECBAgAABAlsIXJadPt1ix/ZJgAABAgQIHCcQQ0peHLeKpQkQIECAAIGNBN6U/f5to33bLQECBAgQIECAAAECBAjkFojevzoU5T4GRE+AAAECjQg4YTfSUKpJgAABAgSKQLwH+IoEAQIECBAgQIAAAQIECBBYWSDuI79ceZ92R4AAAQIECJwoIAF8IpzVCBAgQIDARgIuuDeCt1sCBAgQIECAAAECBAgkFnhRYjeSZOIDQOgECBAg0JaABHBb7aW2BAgQIEAgEsDx3iWF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');
+    background-position: center;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    position: relative;
+  }
+  .bar.hide-prelaunch {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .bar.countdown-only {
+    grid-template-columns: 0fr auto 0fr;
+    background-image: none;
+  }
+
+
+
+.side {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 45px 28px 0;
+  min-width: 0;
+  position: relative;
+  z-index: 4;
+  overflow: visible;
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    opacity 0.75s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+    padding 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+}
+  .side.left { justify-content: flex-start; }
+  .side.right {
+    flex-direction: row-reverse;
+    justify-content: flex-start;
+  }
+
+  .bar.countdown-only .side.left {
+    opacity: 0;
+    transform: translateX(-28px);
+    padding-left: 0;
+    padding-right: 0;
+    pointer-events: none;
+  }
+  .bar.countdown-only .side.right {
+    opacity: 0;
+    transform: translateX(28px);
+    padding-left: 0;
+    padding-right: 0;
+    pointer-events: none;
+  }
+
+  .bar:not(.countdown-only) .side.left { transition-delay: 0.05s; }
+  .bar:not(.countdown-only) .side.right { transition-delay: 0.18s; }
+  .bar:not(.countdown-only) .side .engines {
+    transition: opacity 0.6s ease 0.25s, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.2s;
+  }
+  .bar:not(.countdown-only) .side .gauges {
+    transition: opacity 0.65s ease 0.35s, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.28s;
+  }
+  .bar.countdown-only .side .engines,
+  .bar.countdown-only .side .gauges {
+    opacity: 0;
+    transform: scale(0.92);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+
+  .bar.focus-booster { grid-template-columns: 1.55fr auto 0.5fr; }
+  .bar.focus-booster .side.right { opacity: 0.38; transform: scale(0.92); }
+  .bar.focus-ship { grid-template-columns: 0.5fr auto 1.55fr; }
+  .bar.focus-ship .side.left { opacity: 0.38; transform: scale(0.92); }
+
+  /* circular gauges */
+  .gauges {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-shrink: 0;
+  }
+  .side.right .gauges { flex-direction: row-reverse; }
+
+  .gauge {
+    position: relative;
+    width: 110px;
+    height: 110px;
+    flex-shrink: 0;
+  }
+  .gauge svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+  .gauge .track {
+    fill: none;
+    stroke: rgba(180, 195, 215, 0.18);
+    stroke-width: 4.5;
+  }
+  .gauge .fill {
+    fill: none;
+    stroke: rgba(210, 225, 245, 0.85);
+    stroke-width: 4.5;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.35s ease;
+  }
+  .gauge .inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .gauge .label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 2px;
+  }
+  .gauge .val {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 22px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+    line-height: 1;
+  }
+  .gauge .unit {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dim2);
+    margin-top: 3px;
+  }
+
+  /* engine rings */
+  .engines {
+    position: relative;
+    width: 130px;
+    height: 130px;
+    flex-shrink: 0;
+  }
+  .engines::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 100%; height: 100%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 1.5px solid rgba(200, 210, 225, 0.35);
+    box-shadow:
+      0 0 0 1px rgba(200, 210, 225, 0.06),
+      inset 0 0 14px rgba(200, 210, 225, 0.04);
+    pointer-events: none;
+  }
+  .engines .e {
+    position: absolute;
+    border-radius: 50%;
+    border: 1.5px solid rgba(200, 210, 225, 0.28);
+    background: transparent;
+    transform: translate(-50%, -50%);
+    transition: background .12s, box-shadow .12s, border-color .12s;
+  }
+  .engines .e.lit {
+    background: #e8eef8;
+    border-color: #e8eef8;
+    box-shadow: 0 0 7px 1px rgba(220, 235, 255, 0.65);
+  }
+
+  /* center clock */
+  .center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    align-self: end;
+    padding: 0 40px 26px;
+    min-width: 260px;
+    position: relative;
+    z-index: 4;
+    transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1), padding 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .bar.countdown-only .center {
+    padding: 0 52px 26px;
+    transform: scale(1.04);
+    transform-origin: bottom center;
+  }
+
+  .clockbox {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .clock {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: #fff;
+    text-shadow: 0 0 20px rgba(255,255,255,0.12);
+    transition: font-size 0.8s cubic-bezier(0.22, 1, 0.36, 1), color 0.2s;
+  }
+  .bar.countdown-only .clock { font-size: 48px; }
+  .clock.hold { color: var(--amber); }
+  .clock.abort { color: var(--red); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.55} }
+
+  .mission {
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.85);
+  }
+  .chip {
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    padding: 3px 12px;
+    border-radius: 2px;
+    display: none;
+  }
+  .chip.show { display: inline-block; }
+  .chip.hold {
+    color: var(--amber);
+    border: 1px solid rgba(255,201,60,0.35);
+    background: rgba(255,201,60,0.08);
+  }
+  .chip.abort {
+    color: var(--red);
+    border: 1px solid rgba(255,65,65,0.35);
+    background: rgba(255,65,65,0.1);
+  }
+
+  /* ========== Animated text (per-character) ========== */
+  .ch { display: inline-block; white-space: pre; }
+  /* gentle tick: transform/opacity only (no blur/filter), never fully invisible */
+  .ch.tick { animation: digitIn 0.25s ease-out backwards; }
+  @keyframes digitIn {
+    0%   { opacity: 0.35; transform: translateY(-14%); }
+    100% { opacity: 1;    transform: translateY(0); }
+  }
+  /* last 10 seconds: same speed, just a touch brighter */
+  .clock.final .ch.tick { animation: digitIn 0.25s ease-out backwards; }
+  /* T-  ->  T+ at liftoff */
+  .clock.burst { animation: liftoffBurst 1s ease-out; }
+  @keyframes liftoffBurst {
+    0%   { transform: scale(1); }
+    20%  { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+  .mission .ch.tick { animation: labelIn 0.5s ease-out backwards; }
+  @keyframes labelIn {
+    0%   { opacity: 0; transform: translateY(6px); filter: blur(2px); }
+    100% { opacity: 1; transform: translateY(0);   filter: blur(0); }
+  }
+  .corner-prefix .ch.tick,
+  .corner-mission .ch.tick { animation: labelIn 0.45s ease-out backwards; }
+
+  /* ========== T-10 telemetry reveal ========== */
+  .engines::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid var(--blue-soft);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .side::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 5;
+    background: linear-gradient(100deg, transparent, rgba(124,192,255,0.30), transparent);
+    background-size: 45% 100%;
+    background-repeat: no-repeat;
+    background-position: -150% 0;
+  }
+  .side.left  .engines { --base: 380ms; }
+  .side.right .engines { --base: 520ms; }
+  .side.left  .gauge:nth-child(1) { --gd: 60ms; }
+  .side.left  .gauge:nth-child(2) { --gd: 180ms; }
+  .side.right .gauge:nth-child(1) { --gd: 160ms; }
+  .side.right .gauge:nth-child(2) { --gd: 280ms; }
+
+  .bar.telemetry-in .side::before { animation: sideSweep 1.3s ease-in-out 0.1s; }
+  .bar.telemetry-in .side.right::before { animation-delay: 0.25s; }
+  @keyframes sideSweep {
+    0%   { opacity: 1; background-position: -150% 0; }
+    100% { opacity: 1; background-position: 250% 0; }
+  }
+
+  .bar.telemetry-in .gauge {
+    animation: gaugeIn 0.85s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: var(--gd, 0ms);
+  }
+  @keyframes gaugeIn {
+    0%   { opacity: 0; transform: scale(0.65) translateY(16px); filter: blur(4px) drop-shadow(0 0 0 rgba(124,192,255,0)); }
+    55%  { opacity: 1; filter: blur(0) drop-shadow(0 0 14px rgba(124,192,255,0.85)); }
+    100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0) drop-shadow(0 0 0 rgba(124,192,255,0)); }
+  }
+  .bar.telemetry-in .gauge .track {
+    stroke-dasharray: 263.9;
+    animation: trackDraw 1s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+    animation-delay: var(--gd, 0ms);
+  }
+  @keyframes trackDraw {
+    0%   { stroke-dashoffset: 263.9; stroke: rgba(124,192,255,0.9); }
+    100% { stroke-dashoffset: 0; }
+  }
+  .bar.telemetry-in .gauge .inner > * {
+    animation: valIn 0.55s ease-out backwards;
+    animation-delay: calc(var(--gd, 0ms) + 320ms);
+  }
+  @keyframes valIn {
+    0%   { opacity: 0; transform: translateY(7px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  .bar.telemetry-in .engines::before {
+    animation: engRingIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: var(--base, 0ms);
+  }
+  @keyframes engRingIn {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.55); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+  .bar.telemetry-in .engines::after {
+    animation: engRipple 1.1s ease-out;
+    animation-delay: calc(var(--base, 0ms) + 120ms);
+  }
+  @keyframes engRipple {
+    0%   { opacity: 0.85; transform: scale(0.9); }
+    100% { opacity: 0;    transform: scale(1.45); }
+  }
+  .bar.telemetry-in .engines .e {
+    animation: engDotIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+    animation-delay: calc(var(--base, 0ms) + var(--d, 0ms));
+  }
+  @keyframes engDotIn {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0); background: #e8eef8; box-shadow: 0 0 10px 3px rgba(124,192,255,0.9); }
+    60%  { opacity: 1; background: #e8eef8; box-shadow: 0 0 10px 3px rgba(124,192,255,0.9); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+  .bar.telemetry-in .center .clockbox { animation: clockKick 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
+  @keyframes clockKick {
+    0%   { transform: scale(1); }
+    25%  { transform: scale(1.1); filter: drop-shadow(0 0 14px rgba(124,192,255,0.8)); }
+    100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(124,192,255,0)); }
+  }
+
+  /* top-left corner countdown badge (last 40s / post T-0) */
+  .corner {
+    position: fixed;
+    top: 26px;
+    left: 26px;
+    z-index: 20;
+    opacity: 0;
+    transform: translateX(-18px);
+    pointer-events: none;
+    transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .corner.show {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  .corner-shape {
+    background: linear-gradient(160deg, rgba(42,56,76,0.96), rgba(9,13,20,0.97));
+    border-radius: 9px 0 0 9px;
+    clip-path: polygon(0 0, 100% 0, calc(100% - 28px) 100%, 0 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.10),
+      0 10px 28px rgba(0,0,0,0.4);
+    padding: 14px 52px 13px 22px;
+  }
+  .corner-clockrow {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    line-height: 1;
+  }
+  .corner-prefix {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--fg);
+    letter-spacing: 0.02em;
+  }
+  .corner-time {
+    font-size: 32px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.03em;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 16px rgba(255,255,255,0.12);
+  }
+  .corner-time.hold { color: var(--amber); }
+  .corner-time.abort { color: var(--red); animation: pulse 1s infinite; }
+  .corner-mission {
+    margin-top: 7px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  /* ========== SpaceX-style arc timeline ==========
+     Design space matches the bar art: 1920 wide.
+     Arc box uses aspect-ratio 1920/220; labels need extra pad below.
+     --tl-h is the total reserved height so the telemetry bar can sit above it. */
+  :root {
+    --tl-arc-ratio: 220 / 1920;          /* arc drawing area height / width */
+    --tl-label-pad: 4.2vw;               /* room for below-labels under the line */
+    --tl-h: calc(100vw * 110 / 1920 + 4.2vw);   /* compact: bar sits right above the timeline */
+  }
+  #tlStage {
+    position: fixed;
+    left: 0; right: 0; bottom: 1.5vw;  /* timeline in the upper part of the bar's center gap, clock below */
+    width: 100%;
+    height: var(--tl-h);
+    z-index: 6;                          /* above the bar */
+    pointer-events: none;
+    transition: opacity 0.45s ease, transform 0.45s ease;
+  }
+  #tlStage.hidden { opacity: 0; transform: translateY(12px); }
+  #tlMask {
+    position: relative;
+    width: 100%;
+    height: calc(100vw * 110 / 1920);
+    /* extra space under the arc for "below" labels — not clipped */
+    padding-bottom: 4.2vw;
+    box-sizing: content-box;
+  }
+  #tl {
+    position: relative;
+    /* only the gap between the left and right telemetry blocks (bar art is 1920 wide, gap ~960) */
+    width: 50%;
+    height: 100%;
+    margin: 0 auto;
+    font-family: 'Barlow Condensed', 'Inter', sans-serif;
+  }
+  #tl svg {
+    position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+    overflow: visible;
+    shape-rendering: geometricPrecision;
+  }
+  .tl-node {
+    position: absolute;
+    width: 12.5vw;
+    text-align: center;
+    transform: translateX(-50%);
+    font-size: max(10px, 1.04vw);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #fff;
+    transition: color .25s ease, opacity .2s ease;
+    line-height: 1.15;
+    pointer-events: none;
+  }
+  .tl-node .dot {
+    position: absolute; left: 50%;
+    width: max(7px, 0.58vw);
+    height: max(7px, 0.58vw);
+    margin-left: calc(max(7px, 0.58vw) / -2);
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.95);
+    background: rgba(8,10,16,0.85);
+    transition: all .25s ease;
+  }
+  /* short stem connecting label to the arc (SpaceX style) */
+  .tl-node .stem {
+    position: absolute; left: 50%;
+    width: 1px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.55), rgba(255,255,255,0.15));
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .tl-node.below .dot { top: calc(max(7px, 0.58vw) / -2); }
+  .tl-node.below .stem {
+    top: max(5px, 0.4vw);
+    height: max(8px, 0.7vw);
+  }
+  .tl-node.below .txt { margin-top: max(14px, 1.25vw); }
+  .tl-node.above .dot { top: calc(max(7px, 0.58vw) / -2); }
+  .tl-node.above .stem {
+    bottom: calc(100% - max(7px, 0.58vw) / 2);
+    height: max(8px, 0.7vw);
+    background: linear-gradient(to top, rgba(255,255,255,0.55), rgba(255,255,255,0.15));
+  }
+  .tl-node.above .txt { margin-top: -2.19vw; }
+  .tl-node.done { color: #fff; }
+  .tl-node.done .dot {
+    background: #fff;
+    border-color: #fff;
+    box-shadow: 0 0 6px rgba(255,255,255,0.45);
+  }
+  .tl-node.current { color: #fff; }
+  .tl-node.current .dot {
+    background: #fff;
+    border-color: #fff;
+    box-shadow: 0 0 10px #fff, 0 0 22px rgba(255,255,255,0.55);
+    transform: translateX(calc(max(7px, 0.58vw) / -2)) scale(1.45);
+  }
+  .tl-node.crowded .txt { opacity: 0; }
+  .tl-node.crowded .stem { opacity: 0; }
+
+  /* "now" pointer — bright core + soft halo, SpaceX live style */
+  #tlMarker {
+    position: absolute;
+    width: max(12px, 0.94vw);
+    height: max(12px, 0.94vw);
+    margin-left: calc(max(12px, 0.94vw) / -2);
+    margin-top: calc(max(12px, 0.94vw) / -2);
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #fff 0%, #f0f4ff 45%, #c8d4e8 100%);
+    box-shadow:
+      0 0 0 2px rgba(255,255,255,0.35),
+      0 0 12px 3px rgba(255,255,255,0.85),
+      0 0 28px 6px rgba(180,200,255,0.35);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .3s ease;
+    z-index: 2;
+  }
+  #tlMarker.show { opacity: 1; }
+  #tlMarker::after {
+    content: '';
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 220%; height: 220%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.35);
+    animation: tlPulse 2.2s ease-out infinite;
+  }
+  @keyframes tlPulse {
+    0%   { opacity: 0.7; transform: translate(-50%, -50%) scale(0.7); }
+    100% { opacity: 0;   transform: translate(-50%, -50%) scale(1.6); }
+  }
+
+  /* Lift telemetry bar by the full timeline height so they never overlap */
+  .bar-stage.with-timeline {
+    bottom: 0;
+  }
+</style>
+</head>
+<body>
+<div class="corner" id="corner">
+  <div class="corner-shape">
+    <div class="corner-clockrow">
+      <span class="corner-prefix" id="cornerPrefix">T-</span>
+      <span class="corner-time" id="cornerTime">00:00:00</span>
+    </div>
+    <div class="corner-mission" id="cornerMission">STARSHIP FLIGHT TEST</div>
+  </div>
+</div>
+
+
+<!-- SpaceX-style scrolling arc timeline (edit STAGE_ORDER in the script below) -->
+<div id="tlStage">
+  <div id="tlMask">
+    <div id="tl">
+      <svg id="tlCurve" viewBox="0 0 960 110" preserveAspectRatio="none"></svg>
+      <div id="tlMarker"></div>
+    </div>
+  </div>
+</div>
+
+<div class="bar-stage with-timeline" id="barStage">
+<div class="bar" id="bar">
+
+  <div class="side left">
+    <div class="gauges">
+      <div class="gauge">
+        <svg viewBox="0 0 100 100">
+          <circle class="track" cx="50" cy="50" r="42"/>
+          <circle class="fill" id="gBSpdFill" cx="50" cy="50" r="42"
+            stroke-dasharray="263.9" stroke-dashoffset="263.9"/>
+        </svg>
+        <div class="inner">
+          <div class="label">Speed</div>
+          <div class="val" id="bSpd">0</div>
+          <div class="unit">M/S</div>
+        </div>
+      </div>
+      <div class="gauge">
+        <svg viewBox="0 0 100 100">
+          <circle class="track" cx="50" cy="50" r="42"/>
+          <circle class="fill" id="gBAltFill" cx="50" cy="50" r="42"
+            stroke-dasharray="263.9" stroke-dashoffset="263.9"/>
+        </svg>
+        <div class="inner">
+          <div class="label">Altitude</div>
+          <div class="val" id="bAlt">0</div>
+          <div class="unit">KM</div>
+        </div>
+      </div>
+    </div>
+    <div class="engines" id="engB"></div>
+  </div>
+
+  <div class="center">
+    <div class="clockbox">
+      <div class="clock" id="clock">T+00:00:00</div>
+      <div class="mission" id="label">STARSHIP FLIGHT TEST</div>
+      <div class="chip" id="chip"></div>
+    </div>
+  </div>
+
+  <div class="side right">
+    <div class="gauges">
+      <div class="gauge">
+        <svg viewBox="0 0 100 100">
+          <circle class="track" cx="50" cy="50" r="42"/>
+          <circle class="fill" id="gSSpdFill" cx="50" cy="50" r="42"
+            stroke-dasharray="263.9" stroke-dashoffset="263.9"/>
+        </svg>
+        <div class="inner">
+          <div class="label">Speed</div>
+          <div class="val" id="sSpd">0</div>
+          <div class="unit">M/S</div>
+        </div>
+      </div>
+      <div class="gauge">
+        <svg viewBox="0 0 100 100">
+          <circle class="track" cx="50" cy="50" r="42"/>
+          <circle class="fill" id="gSAltFill" cx="50" cy="50" r="42"
+            stroke-dasharray="263.9" stroke-dashoffset="263.9"/>
+        </svg>
+        <div class="inner">
+          <div class="label">Altitude</div>
+          <div class="val" id="sAlt">0</div>
+          <div class="unit">KM</div>
+        </div>
+      </div>
+    </div>
+    <div class="engines" id="engS"></div>
+  </div>
+</div>
+</div>
+
+<script>
+(function () {
+  const CIRC = 263.89378277
+
+  function rings(box, layout) {
+    const els = []
+    let seq = 0
+    layout.forEach(r => {
+      for (let i = 0; i < r.count; i++) {
+        const a = (r.start + 360 / r.count * i) * Math.PI / 180
+        const el = document.createElement('div')
+        el.className = 'e'
+        el.style.left = (50 + r.r * Math.cos(a)) + '%'
+        el.style.top = (50 + r.r * Math.sin(a)) + '%'
+        el.style.width = r.size + '%'
+        el.style.height = r.size + '%'
+        el.style.setProperty('--d', (seq++ * 14) + 'ms')
+        box.appendChild(el)
+        els.push(el)
+      }
+    })
+    return els
+  }
+
+  // Engine layouts per program
+  const LAYOUTS = {
+    starship: {
+      // Looks like the original 3 / 10 / 20 rings. Which dot belongs to which engine group
+      // is set separately by STAGE1_ORDER below.
+      stage1: [
+        { count: 3,  r: 11, size: 12,  start: 90 },   // centre 3 (triangle pointing down)
+        { count: 10, r: 26, size: 10,  start: -72 },  // ring of 10 (pair at top, dots at left/right)
+        { count: 20, r: 41, size: 8.5, start: -81 }   // outer 20
+      ],
+      stage2: [
+        { count: 3, r: 14, size: 15, start: -90 },
+        { count: 3, r: 34, size: 22, start: -30 }
+      ]
+    },
+    eclipse: {
+      // Falcon 9: 9 Merlin in octaweb + 1 vacuum on stage 2
+      stage1: [
+        { count: 1, r: 0,  size: 14, start: 0 },
+        { count: 8, r: 28, size: 12, start: -90 }
+      ],
+      stage2: [
+        { count: 1, r: 0, size: 22, start: 0 }
+      ]
+    }
+  }
+
+  // ---- BOOSTER ENGINE ORDER (edit these 4 lines) ----
+  // Dots are numbered: centre = 0,1,2 | ring of 10 = 3..12 | outer ring of 20 = 13..32
+  // Each ring is numbered clockwise starting at the top-left dot of its top pair.
+  const BACK_DOTS   = [5, 10]  // the 2 descent engines (ring dots 5 and 10 = right and left sides)
+  const RING_FIRST  = 3        // which ring dot the "left" group of 8 starts from (3..12), goes clockwise
+  const OUTER_FIRST = 13       // which outer dot the "right" group of 20 starts from (13..32), goes clockwise
+  // ----------------------------------------------------
+  // Lua order: front 3 -> centre dots | back 2 -> BACK_DOTS | left 8 -> rest of ring | right 20 -> outer
+  const STAGE1_ORDER = (function () {
+    const order = [0, 1, 2].concat(BACK_DOTS)
+    for (let k = 0; k < 10; k++) {
+      const d = 3 + ((RING_FIRST - 3 + k) % 10)
+      if (BACK_DOTS.indexOf(d) === -1) order.push(d)
+    }
+    for (let k = 0; k < 20; k++) order.push(13 + ((OUTER_FIRST - 13 + k) % 20))
+    return order
+  })()
+
+  let bEng = []
+  let sEng = []
+  let currentProg = null
+
+  function rebuildEngines(prog) {
+    prog = prog || 'starship'
+    if (prog === currentProg) return
+    currentProg = prog
+    const layout = LAYOUTS[prog] || LAYOUTS.starship
+    const boxB = document.getElementById('engB')
+    const boxS = document.getElementById('engS')
+    boxB.innerHTML = ''
+    boxS.innerHTML = ''
+    bEng = rings(boxB, layout.stage1)
+    if (prog === 'starship' && bEng.length === STAGE1_ORDER.length) {
+      bEng = STAGE1_ORDER.map(function (n) { return bEng[n] })
+    }
+    sEng = rings(boxS, layout.stage2)
+  }
+  rebuildEngines('starship')
+
+
+  /* =====================================================================
+   *  TIMELINE CONFIG — edit this array to change milestones.
+   *
+   *  Each entry:
+   *    key   : unique id (used if server sends {type:"stage", key:"..."})
+   *    label : text shown under/above the dot. Use \n for two lines.
+   *    pos   : "above" | "below"  (alternating keeps labels readable)
+   *    t     : seconds relative to liftoff (T+0). Negative = countdown.
+   *
+   *  GO/NO-GO polls: add as many as you need at any times, e.g.:
+   *    { key: 'GO_NOGO_Tm60',  label: 'GO/NO-GO\nPOLL', pos: 'below', t: -60 },
+   *    { key: 'GO_NOGO_Tp600', label: 'GO/NO-GO\nPOLL', pos: 'above', t: 600 },
+   *  Keys must be unique. Labels can be identical.
+   * ===================================================================== */
+let STAGE_ORDER = [];
+  function applyTimelineFromState(events) {
+    if (!Array.isArray(events) || !events.length) return false
+    STAGE_ORDER = events.map(e => ({
+      key: e.key || e.label || 'EVENT',
+      label: e.label || e.key || 'EVENT',
+      pos: e.pos === 'above' ? 'above' : 'below',
+      t: Number(e.t) || 0
+    })).sort((a, b) => a.t - b.t)
+    return true
+  }
+  // Fallback defaults if server has not sent events yet
+  applyTimelineFromState([
+    { key: 'GO_PROP_LOAD', label: 'GO FOR\nPROP LOAD', pos: 'above', t: -3000 },
+    { key: 'LIFTOFF', label: 'LIFTOFF', pos: 'below', t: 0 },
+    { key: 'MAXQ', label: 'MAX-Q', pos: 'above', t: 58 },
+    { key: 'HOT_STAGE', label: 'HOT-STAGING', pos: 'above', t: 142 },
+    { key: 'LANDING', label: 'LANDING', pos: 'above', t: 6030 }
+  ]);
+
+  // Timeline width = gap between the two telemetry blocks (must match #tl width / viewBox)
+  const TL_W = 960, TL_H = 110;
+  const TL_CX = TL_W / 2;
+  // Perfectly flat line
+  const TL_LINE_Y = 76;
+  function tlArcY(x) { return TL_LINE_Y; }
+  function tlArcPath(x0, x1) {
+    return 'M' + x0.toFixed(1) + ',' + TL_LINE_Y + ' L' + x1.toFixed(1) + ',' + TL_LINE_Y;
+  }
+
+  const TARGET_PX = 300;
+  const MAX_SCALE = 20;
+  const DEFAULT_GAP = 300;
+  const DEFAULT_SCALE = 16;
+  const MIN_MEANINGFUL_GAP = 8;
+  let currentScale = 16;
+  let syncOffset = 0;
+  let targetSyncOffset = 0;
+
+  function targetScale(eff) {
+    let prevIdx = -1, nextIdx = -1;
+    for (let i = 0; i < STAGE_ORDER.length; i++) {
+      if (STAGE_ORDER[i].t <= eff) prevIdx = i;
+      else { nextIdx = i; break; }
+    }
+    let prevT = prevIdx >= 0 ? STAGE_ORDER[prevIdx].t : null;
+    let nextT = nextIdx >= 0 ? STAGE_ORDER[nextIdx].t : null;
+    let pIdx = prevIdx;
+    while (prevT !== null && nextT !== null && nextT - prevT < MIN_MEANINGFUL_GAP && pIdx > 0) {
+      pIdx--; prevT = STAGE_ORDER[pIdx].t;
+    }
+    let nIdx = nextIdx;
+    while (prevT !== null && nextT !== null && nextT - prevT < MIN_MEANINGFUL_GAP && nIdx !== -1 && nIdx < STAGE_ORDER.length - 1) {
+      nIdx++; nextT = STAGE_ORDER[nIdx].t;
+    }
+    if (prevT === null && nextT === null) return DEFAULT_SCALE;
+    if (prevT === null) prevT = nextT - DEFAULT_GAP;
+    if (nextT === null) nextT = prevT + DEFAULT_GAP;
+    const gap = Math.max(nextT - prevT, 0.5);
+    return Math.min((2 * TARGET_PX) / gap, MAX_SCALE);
+  }
+
+  const tlSvg = document.getElementById('tlCurve');
+  const tlEl = document.getElementById('tl');
+  const tlNodeEls = [];
+  const tlMarkerEl = document.getElementById('tlMarker');
+  const tlStageEl = document.getElementById('tlStage');
+  const barStageEl = document.getElementById('barStage');
+
+  let tlProgressPath = null;
+  let tlFuturePath = null;
+
+  function buildTimeline() {
+    if (!tlSvg || !tlEl) return;
+    // Clear previous nodes and SVG so rebuild works when CEO edits events
+    tlNodeEls.length = 0;
+    Array.from(tlEl.querySelectorAll('.tl-node')).forEach(n => n.remove());
+    while (tlSvg.firstChild) tlSvg.removeChild(tlSvg.firstChild);
+    tlProgressPath = null;
+    tlFuturePath = null;
+    const NS = 'http://www.w3.org/2000/svg';
+    const d = tlArcPath(0, TL_W);
+
+    // soft fade at both ends of the line
+    const defs = document.createElementNS(NS, 'defs');
+    defs.innerHTML =
+      '<linearGradient id="tlFadeGrad" x1="0" x2="1" y1="0" y2="0">' +
+        '<stop offset="0" stop-color="#fff" stop-opacity="0"/>' +
+        '<stop offset="0.1" stop-color="#fff" stop-opacity="1"/>' +
+        '<stop offset="0.9" stop-color="#fff" stop-opacity="1"/>' +
+        '<stop offset="1" stop-color="#fff" stop-opacity="0"/>' +
+      '</linearGradient>' +
+      '<mask id="tlFadeMask" maskUnits="userSpaceOnUse" x="0" y="-100" width="' + TL_W + '" height="500">' +
+        '<rect x="0" y="-100" width="' + TL_W + '" height="500" fill="url(#tlFadeGrad)"/>' +
+      '</mask>';
+    tlSvg.appendChild(defs);
+    const lineGroup = document.createElementNS(NS, 'g');
+    lineGroup.setAttribute('mask', 'url(#tlFadeMask)');
+    tlSvg.appendChild(lineGroup);
+
+    // Layer stack (back → front), SpaceX Starship live style:
+    // 1) soft black halo for contrast on bright video
+    // 2) dim future track (full arc)
+    // 3) bright "elapsed" track (left edge → now) updated each frame
+    // 4) crisp white core line
+    function addPath(attrs) {
+      const p = document.createElementNS(NS, 'path');
+      p.setAttribute('d', d);
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke-linecap', 'round');
+      p.setAttribute('stroke-linejoin', 'round');
+      Object.keys(attrs).forEach(function (k) { p.setAttribute(k, attrs[k]); });
+      lineGroup.appendChild(p);
+      return p;
+    }
+
+    // Future (upcoming) portion — quieter grey-white
+    tlFuturePath = addPath({
+      stroke: '#ffffff',
+      'stroke-width': '2',
+      id: 'tlFuture'
+    });
+
+    // Elapsed / past portion — solid bright white with glow via wide under-stroke
+    addPath({
+      stroke: 'rgba(255,255,255,0.22)',
+      'stroke-width': '6',
+      id: 'tlElapsedGlow'
+    });
+    tlProgressPath = addPath({
+      stroke: '#ffffff',
+      'stroke-width': '2.6',
+      id: 'tlElapsed'
+    });
+
+    // Full-arc hairline on top for continuous structure
+    addPath({
+      stroke: '#ffffff',
+      'stroke-width': '1.2',
+      id: 'tlCore'
+    });
+
+    STAGE_ORDER.forEach(function (s) {
+      const el = document.createElement('div');
+      el.className = 'tl-node ' + s.pos;
+      el.innerHTML = '<div class="dot"></div><div class="stem"></div><div class="txt">' +
+        s.label.split('\n').map(function (l) { return '<div>' + l + '</div>'; }).join('') + '</div>';
+      tlEl.appendChild(el);
+      tlNodeEls.push(el);
+    });
+
+    if (tlMarkerEl) {
+      tlMarkerEl.classList.add('show');
+      tlMarkerEl.style.left = (TL_CX / TL_W * 100) + '%';
+      tlMarkerEl.style.top = (tlArcY(TL_CX) / TL_H * 100) + '%';
+    }
+  }
+  buildTimeline();
+
+  const NODE_FADE_PX = 80;
+  function nodeOpacity(x) {
+    const leftFade = Math.max(0, Math.min(1, x / NODE_FADE_PX));
+    const rightFade = Math.max(0, Math.min(1, (TL_W - x) / NODE_FADE_PX));
+    return Math.min(leftFade, rightFade);
+  }
+
+  function positionTimeline(missionTime) {
+    if (!tlNodeEls.length) return;
+    syncOffset += (targetSyncOffset - syncOffset) * 0.15;
+    const eff = missionTime - syncOffset;
+    currentScale += (targetScale(eff) - currentScale) * 0.04;
+    let nextIdx = -1;
+    const xs = [];
+    STAGE_ORDER.forEach((s, i) => {
+      const x = TL_CX + (s.t - eff) * currentScale;
+      xs.push(x);
+      const y = tlArcY(x);
+      const el = tlNodeEls[i];
+      el.style.left = (x / TL_W * 100) + '%';
+      el.style.top = (y / TL_H * 100) + '%';
+      el.style.opacity = nodeOpacity(x);
+      const passed = s.t <= eff;
+      el.classList.toggle('done', passed);
+      if (!passed && nextIdx === -1) nextIdx = i;
+    });
+
+    // Bright elapsed arc from left edge up to the fixed "now" marker (center)
+    if (tlProgressPath) {
+      const pastD = tlArcPath(0, TL_CX);
+      tlProgressPath.setAttribute('d', pastD);
+      const glow = document.getElementById('tlElapsedGlow');
+      if (glow) glow.setAttribute('d', pastD);
+    }
+    if (tlFuturePath) {
+      tlFuturePath.setAttribute('d', tlArcPath(TL_CX, TL_W));
+    }
+    const LABEL_MIN_GAP = 80;
+    const LABEL_CLEAR_GAP = 97;
+    tlNodeEls.forEach((el, i) => {
+      el.classList.toggle('current', i === nextIdx);
+      const gapPrev = i > 0 ? Math.abs(xs[i] - xs[i - 1]) : Infinity;
+      const gapNext = i < xs.length - 1 ? Math.abs(xs[i + 1] - xs[i]) : Infinity;
+      const minGap = Math.min(gapPrev, gapNext);
+      const wasCrowded = el.classList.contains('crowded');
+      const threshold = wasCrowded ? LABEL_CLEAR_GAP : LABEL_MIN_GAP;
+      let crowded = false;
+      if (minGap < threshold) {
+        const distI = Math.abs(xs[i] - TL_CX);
+        const prevCloser = gapPrev < threshold && Math.abs(xs[i - 1] - TL_CX) < distI;
+        const nextCloser = gapNext < threshold && Math.abs(xs[i + 1] - TL_CX) < distI;
+        crowded = prevCloser || nextCloser;
+      }
+      el.classList.toggle('crowded', crowded);
+    });
+  }
+
+  positionTimeline(0);
+
+  /** Call when a real stage event arrives from the server to re-sync the dial */
+  function setStage(key, missionTimeNow) {
+    const idx = STAGE_ORDER.findIndex(s => s.key === String(key));
+    if (idx === -1) return;
+    if (missionTimeNow !== undefined) {
+      targetSyncOffset = missionTimeNow - STAGE_ORDER[idx].t;
+    }
+  }
+
+  function missionTimeSec(t) {
+    const e = elapsed(t);
+    // seconds relative to liftoff (T+0): negative during countdown, positive after
+    return t.mode === 'down' ? (e - t.totalMs) / 1000 : e / 1000;
+  }
+
+
+  function setGauge(fillId, value, max) {
+    const el = document.getElementById(fillId)
+    if (!el) return
+    const pct = Math.max(0, Math.min(1, (Number(value) || 0) / max))
+    el.style.strokeDashoffset = String(CIRC * (1 - pct))
+  }
+
+  // Per-character text: only characters that change are re-animated.
+  // A change in length (e.g. digits -> HOLD) rebuilds the text with a small stagger.
+  function setAnimText(el, text, stagger) {
+    if (el._text === text) return
+    el._text = text
+    const chars = Array.from(text)
+    if (!el._chars || el._chars.length !== chars.length) {
+      el.textContent = ''
+      el._chars = chars.map(function (c, i) {
+        const s = document.createElement('span')
+        s.className = 'ch tick'
+        s.textContent = c
+        if (stagger) s.style.animationDelay = (i * stagger) + 'ms'
+        el.appendChild(s)
+        return s
+      })
+      return
+    }
+    const changed = []
+    chars.forEach(function (c, i) {
+      const s = el._chars[i]
+      if (s.textContent !== c) { s.textContent = c; s.classList.remove('tick'); s.style.animationDelay = ''; changed.push(s) }
+    })
+    if (changed.length) {
+      void el.offsetWidth // restart CSS animation
+      changed.forEach(function (s) { s.classList.add('tick') })
+    }
+  }
+
+  // Light engine dots. The per-engine array can lag behind / disagree with the live
+  // enginesLit count (the control panel reads the count), so when they differ trust the count
+  // and fill dots inner ring -> outer ring (matches real boostback 13 / landing 3 / full 33).
+  function applyEngines(els, v) {
+    const arr = Array.isArray(v.engines) ? v.engines : null
+    const litN = (v.enginesLit === undefined || v.enginesLit === null || v.enginesLit === '') ? NaN : Number(v.enginesLit)
+    const hasCount = Number.isFinite(litN)
+    let arrCount = 0
+    if (arr) for (let i = 0; i < arr.length; i++) if (arr[i]) arrCount++
+    const useArr = !!arr && (!hasCount || arrCount === litN)
+    for (let i = 0; i < els.length; i++) {
+      const on = useArr ? !!arr[i] : (hasCount && i < litN)
+      els[i].classList.toggle('lit', on)
+    }
+  }
+
+  function pad(n) { return String(n).padStart(2, '0') }
+  function fmt(ms) {
+    const s = Math.floor(Math.abs(ms) / 1000)
+    return pad(Math.floor(s / 3600)) + ':' + pad(Math.floor((s % 3600) / 60)) + ':' + pad(s % 60)
+  }
+  function mt(m) {
+    const n = Number(m) || 0
+    const km = n / 1000
+    const a = Math.abs(km)
+    if (a >= 100) return String(Math.round(km))
+    return String(Math.round(km * 10) / 10)
+  }
+
+  let state = null, skew = 0, skewReady = false
+  let wasCountdownOnly = true
+  let lastPrefix = null
+  let burstUntil = 0
+  let telemetryTimer = null
+  const REVEAL_AT_MS = 15 * 1000
+
+  // scale-to-fit: bar is designed at 1280px; scale from center-bottom so resize is stable
+  // Must match .bar CSS width/height and the background PNG (1920x240)
+  const BAR_DESIGN_WIDTH = 1920
+  const BAR_DESIGN_HEIGHT = 240
+  let barScale = 1
+  let prelaunchOffset = false
+  let resizeTimer = null
+
+  function applyBarTransform() {
+    const barEl = document.getElementById('bar')
+    if (!barEl) return
+    const ty = prelaunchOffset ? ' translateY(16px)' : ''
+    barEl.style.transform = 'scale(' + barScale + ')' + ty
+  }
+
+  function updateBarScale() {
+    const stage = document.getElementById('barStage')
+    if (!stage) return
+    const w = stage.clientWidth || BAR_DESIGN_WIDTH
+    // Scale to fit viewport width; never upscale past 1 (keeps PNG crisp)
+    barScale = w / BAR_DESIGN_WIDTH
+    // Stage height = scaled bar height so layout/overflow stay correct
+    stage.style.height = Math.round(BAR_DESIGN_HEIGHT * barScale) + 'px'
+    applyBarTransform()
+  }
+
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer)
+    resizeTimer = setTimeout(updateBarScale, 50)
+  })
+  // also handle orientation / OBS browser source size changes
+  if (window.ResizeObserver) {
+    const stage = document.getElementById('barStage')
+    if (stage) {
+      new ResizeObserver(function () {
+        clearTimeout(resizeTimer)
+        resizeTimer = setTimeout(updateBarScale, 30)
+      }).observe(stage)
+    }
+  }
+  updateBarScale()
+
+  function elapsed(t) {
+    if (!t.running) return t.elapsedMs
+    return t.elapsedMs + (Date.now() - skew - t.startTimestamp)
+  }
+
+  function render() {
+    if (!state) return
+    const t = state.timer
+    const e = elapsed(t)
+    let prefix, digits
+    let remainMs = null
+    if (t.mode === 'down') {
+      remainMs = t.totalMs - e
+    }
+    if (t.aborted) {
+      prefix = 'T-'; digits = 'ABORT'
+    } else if (t.hold) {
+      prefix = 'T-'; digits = 'HOLD'
+    } else if (t.mode === 'down') {
+      if (remainMs > 0) { prefix = 'T-'; digits = fmt(remainMs) }
+      else { prefix = 'T+'; digits = fmt(e - t.totalMs) }
+    } else {
+      prefix = 'T+'; digits = fmt(e)
+    }
+    const text = prefix + digits
+
+    // liftoff: T- -> T+
+    if (t.mode === 'down' && prefix === 'T+' && lastPrefix === 'T-' && !t.hold && !t.aborted) {
+      burstUntil = Date.now() + 1300
+    }
+    lastPrefix = prefix
+    const isFinal = t.mode === 'down' && !t.hold && !t.aborted && remainMs !== null && remainMs > 0 && remainMs <= 10000
+
+    const clock = document.getElementById('clock')
+    setAnimText(clock, text, 28)
+    clock.className = 'clock' + (t.aborted ? ' abort' : t.hold ? ' hold' : '') +
+      (isFinal ? ' final' : '') + (Date.now() < burstUntil ? ' burst' : '')
+    const missionLabel = t.label || 'STARSHIP FLIGHT TEST'
+    setAnimText(document.getElementById('label'), missionLabel, 18)
+
+    // corner countdown badge shows alone before T-40; main telemetry bar takes over at T-40
+    const REVEAL_THRESHOLD_MS = 40 * 1000   // T-40: countdown bar + timeline appear
+    const TELEMETRY_AT_MS = 10 * 1000       // T-10: side telemetry appears
+    const isPrelaunch = t.mode === 'down' && remainMs !== null && remainMs > REVEAL_THRESHOLD_MS
+    const w = Object.assign({ timeline:true, boosterEngines:true, shipEngines:true, gauges:true, cornerClock:true }, state.widgets || {})
+    const showCorner = !!w.cornerClock && isPrelaunch
+    document.getElementById('corner').classList.toggle('show', showCorner)
+    document.getElementById('bar').classList.toggle('hide-prelaunch', isPrelaunch)
+    setAnimText(document.getElementById('cornerPrefix'), prefix, 0)
+    const cornerTimeEl = document.getElementById('cornerTime')
+    setAnimText(cornerTimeEl, digits, 24)
+    cornerTimeEl.className = 'corner-time' + (t.aborted ? ' abort' : t.hold ? ' hold' : '')
+    setAnimText(document.getElementById('cornerMission'), missionLabel, 14)
+
+    const chip = document.getElementById('chip')
+    chip.className = 'chip'
+    chip.textContent = ''
+
+    const mode = (state.overlayMode || 'auto').toLowerCase()
+    let countdownOnly = false
+    if (mode === 'countdown') {
+      countdownOnly = true
+    } else if (mode === 'auto') {
+      // T-40..T-10: only the countdown (+ timeline); full telemetry from T-10
+      countdownOnly = t.mode === 'down' && remainMs !== null && remainMs > TELEMETRY_AT_MS
+    }
+
+    const bar = document.getElementById('bar')
+    prelaunchOffset = !!isPrelaunch
+    applyBarTransform()
+    bar.classList.remove('focus-booster', 'focus-ship')
+    if (mode === 'booster') bar.classList.add('focus-booster')
+    if (mode === 'ship') bar.classList.add('focus-ship')
+
+    if (countdownOnly) {
+      bar.classList.add('countdown-only')
+      bar.classList.remove('telemetry-in')
+      clearTimeout(telemetryTimer)
+    } else {
+      if (wasCountdownOnly) {
+        // T-10: telemetry reveal animation (restart cleanly)
+        bar.classList.remove('telemetry-in')
+        void bar.offsetWidth
+        bar.classList.add('telemetry-in')
+        clearTimeout(telemetryTimer)
+        telemetryTimer = setTimeout(() => bar.classList.remove('telemetry-in'), 2800)
+      }
+      bar.classList.remove('countdown-only')
+    }
+    wasCountdownOnly = countdownOnly
+
+    const b = state.vehicle.booster, s = state.vehicle.starship
+    rebuildEngines(state.vehicleProgram || 'starship')
+
+    const bSpd = Math.round(b.velocity || 0)
+    const sSpd = Math.round(s.velocity || 0)
+    document.getElementById('bSpd').textContent = bSpd
+    document.getElementById('bAlt').textContent = mt(b.altitude)
+    document.getElementById('sSpd').textContent = sSpd
+    document.getElementById('sAlt').textContent = mt(s.altitude)
+
+    setGauge('gBSpdFill', bSpd, 1200)
+    setGauge('gBAltFill', Number(b.altitude) / 1000 || 0, 120)
+    setGauge('gSSpdFill', sSpd, 8000)
+    setGauge('gSAltFill', Number(s.altitude) / 1000 || 0, 200)
+
+    applyEngines(bEng, b)
+    applyEngines(sEng, s)
+
+    // Timeline + widget visibility
+    const showTl = !!w.timeline && !isPrelaunch
+    if (tlStageEl) {
+      tlStageEl.classList.toggle('hidden', !showTl)
+      if (showTl) positionTimeline(missionTimeSec(t))
+    }
+    if (barStageEl) barStageEl.classList.toggle('with-timeline', !!showTl)
+
+    // Individual widget visibility (engines / gauges)
+    const leftSide = document.querySelector('.side.left')
+    const rightSide = document.querySelector('.side.right')
+    if (leftSide) {
+      const eng = leftSide.querySelector('.engines')
+      const gau = leftSide.querySelector('.gauges')
+      if (eng) eng.style.display = w.boosterEngines ? '' : 'none'
+      if (gau) gau.style.display = w.gauges ? '' : 'none'
+    }
+    if (rightSide) {
+      const eng = rightSide.querySelector('.engines')
+      const gau = rightSide.querySelector('.gauges')
+      if (eng) eng.style.display = w.shipEngines ? '' : 'none'
+      if (gau) gau.style.display = w.gauges ? '' : 'none'
+    }
+  }
+
+  requestAnimationFrame(function tick() { render(); requestAnimationFrame(tick) })
+
+  function connect() {
+    const p = location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const ws = new WebSocket(p + '//' + location.host + '/')
+    ws.onmessage = e => {
+      try {
+        const m = JSON.parse(e.data)
+        if (m.type === 'state') {
+          state = m
+          if (m.serverNow) {
+            // Smooth the server/client clock offset. Each message's offset includes its network
+            // delay; using it raw makes the clock jump. Snap down to faster (lower-latency) samples,
+            // creep up slowly, and only hard-reset on a big change (e.g. wrong system clock fixed).
+            const sample = Date.now() - m.serverNow
+            // Sync once, then run on the local clock. A delayed packet always gives a HIGHER
+            // sample than the true offset, so only ever accept lower values (never creep up / reset).
+            if (!skewReady) { skew = sample; skewReady = true }
+            else if (sample < skew) skew = sample
+          }
+          if (m.timelineEvents && applyTimelineFromState(m.timelineEvents)) {
+            // Rebuild nodes when the event list changes
+            const sig = m.timelineEvents.map(e => e.id + ':' + e.t + ':' + e.label).join('|')
+            if (sig !== window.__tlSig) {
+              window.__tlSig = sig
+              buildTimeline()
+            }
+          }
+        } else if (m.type === 'stage' && m.key) {
+          setStage(m.key, state && state.timer ? missionTimeSec(state.timer) : undefined)
+        }
+      } catch {}
+    }
+    ws.onclose = () => setTimeout(connect, 1200)
+    ws.onerror = () => ws.close()
+  }
+  connect()
+})()
+</script>
+</body>
+</html>

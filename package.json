@@ -1,0 +1,13 @@
+{
+  "name": "mission-control",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multi-user Mission Control + Stream overlay (server-side)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.21.3"
+  }
+}
